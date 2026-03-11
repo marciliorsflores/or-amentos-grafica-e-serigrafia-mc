@@ -3,277 +3,414 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MC Serigrafia - Orçamentador v41.0</title>
+    <title>MC Serigrafia - Orçamentador V20.1</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <style>
-        :root {
-            --header-gray: #7d7d7d;
-            --active-blue: #0078d7;
-            --bg-blue: #005aab;
-            --orange-finish: #fce4d6;
-            --text-dark: #333;
-            --green-success: #27ae60;
-            --red-delete: #e74c3c;
+        :root { 
+            --bg-blue: #005aab; --active-blue: #0078d7; --text-dark: #333; 
+            --green-success: #27ae60; --red-delete: #e74c3c; --pdf-red: #c0392b; --sync-orange: #f39c12;
         }
-        body { font-family: Arial, sans-serif; margin: 0; background-color: var(--bg-blue); color: white; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .tabs-header { display: flex; background-color: var(--header-gray); height: 45px; padding: 0 10px; }
-        .tab { padding: 0 20px; color: white; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; align-items: center; border-right: 1px solid #999; }
-        .tab.active { background-color: var(--active-blue); }
-        .view-content { display: none; flex-grow: 1; padding: 15px; overflow-y: auto; }
-        .view-content.active { display: grid; }
-
-        /* GRID ORÇAMENTADOR */
-        #orcamentador-view { grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        #sec1 { grid-column: 1; } #sec2 { grid-column: 2; } #sec3 { grid-column: 3; } #sec5 { grid-column: 4; grid-row: 1 / span 2; }
-
-        .white-box { background: white; border-radius: 4px; padding: 12px; color: var(--text-dark); box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 15px; }
-        .block-section h3 { font-size: 14px; font-weight: bold; margin: 0 0 8px 0; text-transform: uppercase; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: var(--bg-blue); color: white; min-height: 100vh; padding-bottom: 220px; }
+        .main-container { width: 100%; max-width: 1400px; margin: auto; padding: 10px; box-sizing: border-box; }
+        .top-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-bottom: 10px; }
+        .panel { background: white; border-radius: 4px; color: var(--text-dark); display: flex; flex-direction: column; border: 1px solid #ccc; }
+        .panel-header { background: var(--bg-blue); color: white; padding: 8px 12px; font-size: 13px; font-weight: bold; font-style: italic; display: flex; justify-content: space-between; align-items: center; }
+        .panel-body { padding: 12px; flex: 1; }
         label { display: block; font-size: 9px; font-weight: bold; color: #666; margin-top: 8px; text-transform: uppercase; }
-        input, select { width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-top: 4px; box-sizing: border-box; }
+        select, input { width: 100%; padding: 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 3px; margin-top: 4px; box-sizing: border-box; }
         
-        .big-input { width: 75px; font-size: 32px; font-weight: bold; text-align: center; background: #f1f1f1; border: none; }
-        .eng-card { margin-top: 8px; padding: 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .blue-info { background: #e3f2fd; border-left: 5px solid #1976d2; color: #0d47a1; }
-        .orange-info { background: #fff3e0; border-left: 5px solid #ff9800; color: #e65100; text-align: center; }
+        .price-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; color: #333; }
+        .price-table th { background: #fce4d6; padding: 8px; border: 1px solid #f4b084; font-weight: bold; text-align: center; }
+        .price-table td { padding: 6px; border: 1px solid #f4b084; text-align: center; background: white; }
+        .row-active { font-weight: bold; background-color: #e3f2fd !important; }
+
+        .size-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+        .size-input { background: #eee; border: none; font-size: 22px; font-weight: bold; text-align: center; padding: 10px; border-radius: 4px; color: var(--text-dark); }
+        .info-box { background: #e3f2fd; border: 1px solid #bbdefb; padding: 10px; border-radius: 4px; margin-top: 10px; color: #0d47a1; font-size: 12px; text-align: center; }
+        .buy-box { background: #fff3e0; border: 1px solid #ffe0b2; padding: 10px; border-radius: 4px; margin-top: 10px; color: #e65100; text-align: center; font-weight: bold; font-size: 11px; }
+        .layout-container { margin-top: 10px; text-align: center; background: #f9f9f9; border: 1px dashed #ccc; padding: 10px; border-radius: 4px; }
+        #canvasLayout { max-width: 100%; height: auto; display: block; margin: 0 auto; background: white; }
         
-        .scale-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .scale-table th { background: #eee; padding: 8px; border: 1px solid #ddd; }
-        .scale-table td { padding: 8px; border: 1px solid #ddd; text-align: center; background: white; }
+        .bottom-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; background: #d1d1d1; padding: 15px; margin-top: 10px; border-radius: 4px; color: black; }
+        .ref-card { background: #e9e9e9; border: 1px solid #999; padding: 10px; font-size: 11px; }
+        .ref-card h4 { margin: 0 0 8px 0; border-bottom: 2px solid var(--bg-blue); padding-bottom: 3px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; color: #333; }
+        .ref-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .ref-table input { padding: 3px; font-size: 10px; text-align: center; border: 1px solid #bbb; }
+        
+        .resumo-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .resumo-table td { padding: 4px 0; border-bottom: 1px dotted #999; font-size: 10px; }
+        .resumo-table .val { text-align: right; font-weight: bold; }
+        .resumo-table .total-line { color: var(--active-blue); font-weight: bold; border-top: 1px solid #999; }
 
-        .acab-item { display: flex; justify-content: space-between; align-items: center; padding: 5px; background: #f1f1f1; margin-top: 5px; border-radius: 3px; font-size: 11px; }
-
-        .footer { background: rgba(0,0,0,0.3); padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid rgba(255,255,255,0.2); }
-        .price-display { font-size: 45px; font-weight: bold; color: #4ade80; }
-        .btn-whats { background: var(--green-success); color: white; border: none; padding: 15px 30px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .footer-floating { position: fixed; bottom: 0; left: 0; width: 100%; background: #2c3e50; padding: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; border-top: 4px solid var(--green-success); box-sizing: border-box; }
+        .final-price-value { font-size: 52px; font-weight: bold; color: #4ade80; text-shadow: 2px 2px 4px black; }
+        .btn-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .btn-action { border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 6px; color: white; text-transform: uppercase; }
+        .btn-sync { background: var(--sync-orange); }
+        .btn-save-hist { background: #3498db; }
+        .btn-pdf { background: var(--pdf-red); }
+        .btn-whatsapp { background: var(--green-success); }
+        .btn-blue-add { background: var(--bg-blue); color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn-del-trash { color: var(--red-delete); cursor: pointer; font-size: 11px; margin-left: 5px; }
     </style>
 </head>
 <body>
-    <div class="tabs-header">
-        <div class="tab" onclick="switchTab('orcamentador')" id="tab-orc">Orçamentador MC</div>
-        <div class="tab" onclick="switchTab('config')" id="tab-config">Configurações (Dashboard)</div>
-    </div>
 
-    <div id="orcamentador-view" class="view-content active">
-        <div class="block-section" id="sec1">
-            <h3>1. Dados do Pedido</h3>
-            <div class="white-box">
-                <label>Tipo de Produto</label>
-                <select id="tipoServico" onchange="calc()">
-                    <option value="bloco">Blocos / Talonários</option>
-                    <option value="avulso">Panfletos / Avulsos</option>
-                </select>
-                <label>Folhas por Bloco</label>
-                <input type="number" id="qtdInterna" value="50" oninput="calc()">
-                <label>Quantidade de Pedido</label>
-                <input type="number" id="qtdVenda" value="0" oninput="calc()" style="border: 2px solid var(--active-blue); font-weight: bold;">
-                <label>Cores (CMYK)</label>
-                <select id="esquemaCores" onchange="calc()">
-                    <option value="4">4x0 (Frente Colorida)</option>
-                    <option value="1">1x0 (Preto)</option>
-                    <option value="8">4x4 (Frente e Verso)</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="block-section" id="sec2">
-            <h3>2. Tamanho e Corte</h3>
-            <div class="white-box">
-                <div style="display:flex; align-items:center; justify-content:space-around;">
-                    <input type="number" id="lar" class="big-input" value="15" oninput="calc()">
-                    <span style="color:var(--active-blue); font-weight:bold;">X</span>
-                    <input type="number" id="alt" class="big-input" value="21" oninput="calc()">
+<div class="main-container">
+    <div class="top-panels">
+        <div class="panel">
+            <div class="panel-header"><span>1. Cliente e Pedido</span><button onclick="novoOrcamento()" style="background:red; color:white; border:none; padding:2px 6px; cursor:pointer; font-size:10px; border-radius:3px;">LIMPAR</button></div>
+            <div class="panel-body">
+                <label>Nome do Cliente</label><input type="text" id="cliNome" oninput="saveAndCalc()">
+                <div style="display:flex; gap:5px">
+                    <div style="flex:1"><label>WhatsApp/CNPJ</label><input type="text" id="cliDados" oninput="saveAndCalc()"></div>
+                    <div style="flex:1"><label>E-mail</label><input type="email" id="cliEmail" oninput="saveAndCalc()"></div>
                 </div>
-                <div class="eng-card blue-info" id="resCorte">Aproveitamento: --<br>Papel: --</div>
-                <div class="eng-card orange-info" id="resRetirar">UTILIZAR: -- fls | COMPRAR: -- fls</div>
-            </div>
-            <div class="block-section" id="sec4">
-                <h3>4. Acabamentos e Tempo</h3>
-                <div class="white-box">
-                    <label>Tempo Estimado Serviço (Hrs)</label>
-                    <input type="number" id="tempo" value="1" step="0.5" oninput="calcDashboard(); calc();">
-                    
-                    <label>Adicionar Acabamento</label>
-                    <select id="selAcab" onchange="addAcab()">
-                        <option value="">-- Selecione --</option>
-                        <option value="Cola / Blocagem|0.50">Cola / Blocagem</option>
-                        <option value="Corte e Refile|0.10">Corte e Refile</option>
-                        <option value="Vinco|0.20">Vinco</option>
-                        <option value="Grampo|0.15">Grampo</option>
-                        <option value="Numeração|0.40">Numeração</option>
-                        <option value="Picote / Serrilha|0.25">Picote / Serrilha</option>
-                        <option value="Dobra Simples|0.15">Dobra Simples</option>
-                        <option value="Furo|0.05">Furo</option>
-                    </select>
-                    <div id="listaAcab"></div>
+                <div style="display:flex; gap:5px">
+                    <div style="flex:1"><label>CEP</label><input type="text" id="cliCep" maxlength="9" onblur="buscarEndereco()" placeholder="00000-000"></div>
+                    <div style="flex:2"><label>Endereço</label><input type="text" id="cliEndereco" oninput="saveAndCalc()"></div>
+                    <div style="flex:0.5"><label>Nº</label><input type="text" id="cliNum" oninput="saveAndCalc()"></div>
+                </div>
+                <label>Tipo de Serviço (Ex: Bloco ou Sacola)</label>
+                <input list="prod-list" id="tipoServico" value="Blocos / Talonários" oninput="saveAndCalc()">
+                <datalist id="prod-list">
+                    <option value="Blocos">
+                    <option value="Panfletos">
+                    <option value="Sacola PEAD Camiseta">
+                    <option value="Sacola PEAD Vazada">
+                    <option value="Sacola PEBD Camiseta">
+                    <option value="Sacola PEBD Vazada">
+                </datalist>
+                <div style="display:flex; gap:5px">
+                    <div style="flex:1"><label>Fls/Bloco</label><input type="number" id="qtdInterna" value="100" oninput="saveAndCalc()"></div>
+                    <div style="flex:1"><label>Qtd Pedido</label><input type="number" id="qtdVenda" value="500" oninput="saveAndCalc()"></div>
                 </div>
             </div>
         </div>
 
-        <div class="block-section" id="sec3">
-            <h3>3. Materiais</h3>
-            <div class="white-box">
-                <label>Papel</label>
-                <select id="papel" onchange="atualizaPrecoPapel(); calc()">
-                    <option value="sulfite75">Sulfite 75g - Inkjet</option>
-                    <option value="couche90">Couchê 90g</option>
-                    <option value="couche150">Couchê 150g</option>
-                    <option value="couche210">Couchê 210g</option>
-                    <option value="couche250">Couchê 250g</option>
-                    <option value="couche300">Couchê 300g</option>
-                    <option value="sulfite180">Sulfite 180g</option>
-                    <option value="sulfite240">Sulfite 240g</option>
-                    <option value="reciclato180">Reciclato 180g</option>
-                    <option value="adesivo">Papel Adesivo</option>
-                </select>
-                <label>Preço Resma (R$)</label>
-                <input type="number" id="pResma" value="0" oninput="calc()">
-                <label>Folhas na Resma</label>
-                <input type="number" id="qResma" value="500" oninput="calc()">
+        <div class="panel">
+            <div class="panel-header">2. Tamanho e Produção</div>
+            <div class="panel-body">
+                <div class="size-row">
+                    <input type="number" id="lar" class="size-input" value="15" oninput="saveAndCalc()">
+                    <span>X</span>
+                    <input type="number" id="alt" class="size-input" value="21" oninput="saveAndCalc()">
+                </div>
+                <div class="info-box" id="resCorte">Modo: Carregando...</div>
+                <div class="buy-box" id="resRetirar">UTILIZAR: -- | COMPRAR: --</div>
+                <div class="layout-container"><canvas id="canvasLayout" width="180" height="120"></canvas></div>
             </div>
         </div>
 
-        <div class="block-section" id="sec5">
-            <h3>5. Tabela de Valores</h3>
-            <div class="white-box" style="background: var(--orange-finish);">
-                <table class="scale-table">
-                    <thead><tr><th>QTD</th><th>UNIT</th><th>TOTAL</th></tr></thead>
-                    <tbody id="tabela"></tbody>
+        <div class="panel">
+            <div class="panel-header">3. Papel, Química e Tempo</div>
+            <div class="panel-body">
+                <label>Material (Papel ou Sacola)</label><select id="gramSelect" onchange="saveAndCalc()"></select>
+                <label>Esquema de Cores</label>
+                <select id="esquemaCores" onchange="saveAndCalc()">
+                    <option value="1">1x0 (Cor Única)</option>
+                    <option value="4">4x0 (Frente Color)</option>
+                    <option value="5">4x1 (Frente Color / Verso PB)</option>
+                    <option value="8">4x4 (Colorido F/V)</option>
+                </select>
+                <div style="display:flex; gap:5px">
+                    <div style="flex:1"><label>Tinta (g/1000)</label><input type="number" id="gastoTintaGramas" value="100" oninput="saveAndCalc()"></div>
+                    <div style="flex:1"><label>Retardador (g)</label><input type="number" id="gRetardadorManual" value="0" oninput="saveAndCalc()"></div>
+                </div>
+                <label>Tempo Produção (Horas)</label><input type="number" id="tempoProd" value="1" step="0.5" oninput="saveAndCalc()">
+                <label>Preço Base Ref. (Material)</label><input type="number" id="pResma" readonly style="background:#f0f0f0">
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">4. Acabamentos e Orçamento</div>
+            <div class="panel-body">
+                <label>Adicionar Acabamento</label><select id="selAcab" onchange="addAcab()"></select>
+                <div id="listaAcab" style="margin-bottom:10px;"></div>
+                <table class="price-table">
+                    <thead><tr><th>QTD</th><th>UNIT.</th><th>TOTAL</th></tr></thead>
+                    <tbody id="tabelaOrcamento"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div id="config-view" class="view-content">
-        <div class="block-section">
-            <h3>Custos Fixos e MEI</h3>
-            <div class="white-box">
-                <label>Pro-labore Marcílio</label><input type="number" id="proM" value="3500" oninput="calcDashboard()">
-                <label>Pro-labore Cristiane</label><input type="number" id="proC" value="3500" oninput="calcDashboard()">
-                <label>INSS / MEI (R$)</label><input type="number" id="mei" value="82" oninput="calcDashboard()">
-                <label>Internet / Telefone</label><input type="number" id="internet" value="150" oninput="calcDashboard()">
-                <label>Luz / Água / Aluguel</label><input type="number" id="fixos" value="1200" oninput="calcDashboard()">
-                <label>Depreciação Equipamentos</label><input type="number" id="depre" value="200" oninput="calcDashboard()">
-                <label>Dias Úteis/Mês</label><input type="number" id="dias" value="22" oninput="calcDashboard()">
-                <label>Horas Úteis/Dia</label><input type="number" id="horas" value="8" oninput="calcDashboard()">
+    <div class="bottom-section">
+        <div class="ref-card">
+            <h4>Setup e Insumos <button class="btn-blue-add" onclick="addItem('setup')">+</button></h4>
+            <div id="containerSetup">
+                <label>Chapa Offset (R$)</label><input type="number" id="baseChapa" value="45.00" oninput="saveAndCalc()">
+                <label>Tinta KG (R$)</label><input type="number" id="baseTinta" value="100.00" oninput="saveAndCalc()">
+                <label>Retardador KG (R$)</label><input type="number" id="baseRetardador" value="55.85" oninput="saveAndCalc()">
+                <label>Frete Busca Serigrafia (R$)</label><input type="number" id="freteBusca" value="150.00" oninput="saveAndCalc()">
+                <label>Setup Fixo (R$)</label><input type="number" id="baseSetup" value="40.00" oninput="saveAndCalc()">
             </div>
         </div>
-        <div class="block-section">
-            <h3>Cálculo de Tintas / Insumos</h3>
-            <div class="white-box">
-                <label>Preço Tinta 1kg (R$)</label>
-                <input type="number" id="pTinta" value="450" oninput="calcDashboard()">
-                <label>Rendimento (m²/kg)</label>
-                <input type="number" id="rendTinta" value="200" oninput="calcDashboard()">
-                <label>Cobertura p/ m² (%)</label>
-                <input type="number" id="coberturaTinta" value="20" oninput="calcDashboard()">
-                <hr>
-                <label>Margem de Lucro Desejada (%)</label>
-                <input type="number" id="margem" value="50" oninput="calcDashboard()">
+        <div class="ref-card">
+            <h4>Custos Fixos Detalhados <button class="btn-blue-add" onclick="addItem('fixos')">+</button></h4>
+            <div id="containerFixos">
+                <label>Pró-labore Marcílio</label><input type="number" id="proMarcilio" value="5000.00" oninput="saveAndCalc()">
+                <label>Salários + Contas (Luz/Água/Aluguel)</label><input type="number" id="contasFixas" value="4080.00" oninput="saveAndCalc()">
+                <div style="display:flex; gap:4px">
+                    <div style="flex:1"><label>Dias/Mês</label><input type="number" id="diasUteis" value="22" oninput="saveAndCalc()"></div>
+                    <div style="flex:1"><label>Hrs/Dia</label><input type="number" id="horasDia" value="7" oninput="saveAndCalc()"></div>
+                </div>
+                <div style="font-size: 10px; margin-top: 5px; color: #d35400;">Custo Hora: <b id="valHoraMaquina">R$ 0,00</b></div>
             </div>
         </div>
-        <div class="block-section">
-            <h3>Indicadores (Fixo Lote)</h3>
-            <div class="white-box" style="background: #eef2f3;">
-                <p>Hora Empresa: <b id="valHora">R$ 0,00</b></p>
-                <p>Custo Matriz/Chapa: <input type="number" id="chapa" value="0" style="width:80px" oninput="calcDashboard()"> </p>
-                <hr>
-                <p style="text-align:center; font-size:18px;">Total Custo Operacional:<br><b id="valFinal" style="color:var(--active-blue);">R$ 0,00</b></p>
-            </div>
+        <div class="ref-card"><h4>Papéis / Sacolas <button class="btn-blue-add" onclick="addItem('papel')">+</button></h4><table class="ref-table"><thead><tr><th>Material</th><th>Preço Mil/64</th><th>66x96</th><th></th></tr></thead><tbody id="tbodyPapel"></tbody></table></div>
+        <div class="ref-card"><h4>Acabamentos <button class="btn-blue-add" onclick="addItem('acabamento')">+</button></h4><table class="ref-table"><thead><tr><th>Serv</th><th>Base</th><th>Mil</th><th></th></tr></thead><tbody id="tbodyAcab"></tbody></table></div>
+        <div class="ref-card" style="background:#fff; border-left:5px solid var(--active-blue);">
+            <h4 style="color:var(--text-dark); border-bottom:2px solid var(--active-blue);">Custos do Pedido</h4>
+            <table class="resumo-table" id="tabelaResumoCustos"></table>
+            <hr>
+            <label style="color:var(--active-blue);">% LUCRO REAL</label><input type="number" id="lucroPorcent" value="30" oninput="saveAndCalc()">
+            <label style="color:var(--sync-orange);">% IMPOSTO (NF)</label><input type="number" id="impostoPorcent" value="0" oninput="saveAndCalc()">
+            <label style="color:#8e44ad;">% COMISSÃO</label><input type="number" id="comissaoPorcent" value="0" oninput="saveAndCalc()">
         </div>
     </div>
+</div>
 
-    <div class="footer">
-        <div><span style="font-size:10px; font-weight:bold;">VALOR FINAL</span><div class="price-display" id="totalPrice">R$ 0,00</div></div>
-        <button onclick="copiar()" class="btn-whats">COPIAR WHATSAPP</button>
+<div class="footer-floating">
+    <div class="final-price-value" id="totalPrice">R$ 0,00</div>
+    <div class="btn-group">
+        <button class="btn-action btn-sync" title="Sincronizar Manual" onclick="puxarPrecosDaPlanilha()"><i class="fa fa-sync"></i> SYNC</button>
+        <button class="btn-action btn-save-hist" onclick="salvarHistoricoPlanilha()"><i class="fa fa-cloud-upload"></i> HISTÓRICO</button>
+        <button class="btn-action btn-pdf" onclick="gerarPDF()"><i class="fa fa-file-pdf"></i> PDF</button>
+        <button class="btn-action btn-whatsapp" onclick="enviarWhatsApp()"><i class="fab fa-whatsapp"></i> ZAP</button>
     </div>
+</div>
 
-    <script>
-        let acabamentosAtivos = [{ nome: "Cola / Blocagem", preco: 0.50 }];
-        let custoFixoLote = 0;
-        let margemIntegrada = 1.5;
-        let custoTintaPorM2 = 0;
+<script>
+    let acabamentosAtivos = [];
+    // SEU LINK ATUALIZADO
+    const URL_GOOGLE = "https://script.google.com/macros/s/AKfycbwGXvbAz7qxmU5xuTVSsuW-EymRqtYxf_4vjRfI9BMRUP47SwJSGPQFWoLUVfKV0Irv/exec";
+    const camposBackup = ['cliNome', 'cliDados', 'cliEmail', 'cliCep', 'cliEndereco', 'cliNum', 'tipoServico', 'qtdInterna', 'qtdVenda', 'lar', 'alt', 'lucroPorcent', 'impostoPorcent', 'comissaoPorcent', 'proMarcilio', 'contasFixas', 'diasUteis', 'horasDia', 'tempoProd', 'baseChapa', 'baseTinta', 'baseRetardador', 'freteBusca', 'baseSetup', 'gastoTintaGramas', 'gRetardadorManual', 'esquemaCores'];
 
-        function switchTab(v) {
-            document.querySelectorAll('.view-content').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-            document.getElementById(v + '-view').classList.add('active');
-            document.getElementById('tab-' + (v=='orcamentador'?'orc':'config')).classList.add('active');
+    async function buscarEndereco() {
+        const cep = document.getElementById('cliCep').value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            try {
+                const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const d = await r.json();
+                if (!d.erro) {
+                    document.getElementById('cliEndereco').value = `${d.logradouro}, ${d.bairro} - ${d.localidade}`;
+                    saveAndCalc();
+                }
+            } catch (e) { console.log("Erro CEP"); }
         }
+    }
 
-        function calcDashboard() {
-            const totalFixoMensal = ['proM','proC','mei','internet','fixos','depre'].reduce((s,i)=>s+(parseFloat(document.getElementById(i).value)||0),0);
-            const d = parseFloat(document.getElementById('dias').value)||22;
-            const h = parseFloat(document.getElementById('horas').value)||8;
-            const horaEmpresa = totalFixoMensal / (d * h);
-            
-            const tempo = parseFloat(document.getElementById('tempo').value)||0;
-            const chapa = parseFloat(document.getElementById('chapa').value)||0;
-            
-            custoFixoLote = (horaEmpresa * tempo) + chapa;
-            margemIntegrada = 1 + (parseFloat(document.getElementById('margem').value)||0)/100;
-
-            // Cálculo custo tinta
-            const pT = parseFloat(document.getElementById('pTinta').value)||0;
-            const rT = parseFloat(document.getElementById('rendTinta').value)||1;
-            const cob = (parseFloat(document.getElementById('coberturaTinta').value)||0)/100;
-            custoTintaPorM2 = (pT / rT) * cob;
-
-            document.getElementById('valHora').innerText = "R$ " + horaEmpresa.toFixed(2);
-            document.getElementById('valFinal').innerText = "R$ " + custoFixoLote.toFixed(2);
-            calc();
+    async function puxarPrecosDaPlanilha() {
+        const btn = document.querySelector('.btn-sync');
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> ATUALIZANDO...';
+        try {
+            const r = await fetch(URL_GOOGLE);
+            const d = await r.json();
+            const tbP = document.getElementById('tbodyPapel'); tbP.innerHTML = "";
+            d.papeis.forEach(p => { 
+                tbP.insertAdjacentHTML('beforeend', `<tr data-gram="${p.gram}"><td>${p.gram}</td><td><input type="number" value="${p.p64}" oninput="saveAndCalc()"></td><td><input type="number" value="${p.p66}" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`); 
+            });
+            const tbA = document.getElementById('tbodyAcab'); tbA.innerHTML = "";
+            d.acabamentos.forEach(a => { 
+                tbA.insertAdjacentHTML('beforeend', `<tr data-serv="${a.serv}"><td>${a.serv}</td><td><input type="number" value="${a.base}" oninput="saveAndCalc()"></td><td><input type="number" value="${a.mil}" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`); 
+            });
+            syncDropdowns(); saveAndCalc();
+            btn.innerHTML = '<i class="fa fa-check"></i> OK';
+            setTimeout(() => btn.innerHTML = '<i class="fa fa-sync"></i> SYNC', 2000);
+        } catch(e) { 
+            btn.innerHTML = '<i class="fa fa-times"></i> ERRO';
+            setTimeout(() => btn.innerHTML = '<i class="fa fa-sync"></i> SYNC', 2000);
         }
+    }
 
-        function calc() {
-            const qInt = parseInt(document.getElementById('qtdInterna').value)||0, L = parseFloat(document.getElementById('lar').value)||1, A = parseFloat(document.getElementById('alt').value)||1;
-            const pResma = parseFloat(document.getElementById('pResma').value)||0, qResma = parseFloat(document.getElementById('qResma').value)||500, qPed = parseInt(document.getElementById('qtdVenda').value)||0;
-            const cores = parseInt(document.getElementById('esquemaCores').value)||4;
+    function calc() {
+        const pro = parseFloat(document.getElementById('proMarcilio').value) || 0;
+        const fix = parseFloat(document.getElementById('contasFixas').value) || 0;
+        const dias = parseFloat(document.getElementById('diasUteis').value) || 1;
+        const hDia = parseFloat(document.getElementById('horasDia').value) || 1;
+        const hm = (pro + fix) / (dias * hDia);
+        document.getElementById('valHoraMaquina').innerText = hm.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        
+        const tipoServ = document.getElementById('tipoServico').value.toLowerCase();
+        const isSerigrafia = tipoServ.includes("sacola");
+        
+        let qv = parseInt(document.getElementById('qtdVenda').value) || 1;
+        if(isSerigrafia && qv < 500) { qv = 500; document.getElementById('qtdVenda').value = 500; }
 
-            let melhor = { ap: Math.max(Math.floor(88/L)*Math.floor(64/A), Math.floor(96/L)*Math.floor(66/A)), f: "66x96" };
-            document.getElementById('resCorte').innerHTML = `Aproveitamento: <b>${melhor.ap}</b> pçs/fl<br>Papel: <b>${melhor.f}</b>`;
+        const qInt = parseInt(document.getElementById('qtdInterna').value) || 1;
+        const tp = parseFloat(document.getElementById('tempoProd').value) || 1;
+        const l = parseFloat(document.getElementById('lar').value) || 1;
+        const a = parseFloat(document.getElementById('alt').value) || 1;
+        const gramFull = document.getElementById('gramSelect').value;
+        const gTintaProd = parseFloat(document.getElementById('gastoTintaGramas').value) || 0;
+        const gRetardador = parseFloat(document.getElementById('gRetardadorManual').value) || 0;
+        const pTintaKg = parseFloat(document.getElementById('baseTinta').value) || 0;
+        const pRetardKg = parseFloat(document.getElementById('baseRetardador').value) || 0;
+        const fBuscaVal = isSerigrafia ? (parseFloat(document.getElementById('freteBusca').value) || 0) : 0;
+        
+        const formats = [{n:"64x88", w:64, h:88}, {n:"66x96", w:66, h:96}];
+        let mf = formats[0], map = 0, ml = l, ma = a;
+        formats.forEach(f => {
+            let ap1 = Math.floor(f.w/l)*Math.floor(f.h/a), ap2 = Math.floor(f.w/a)*Math.floor(f.h/l);
+            if(Math.max(ap1, ap2) > map) { map = Math.max(ap1, ap2); mf = f; ml = (ap2 > ap1) ? a : l; ma = (ap2 > ap1) ? l : a; }
+        });
+
+        const trP = Array.from(document.querySelectorAll('#tbodyPapel tr')).find(tr => tr.dataset.gram === gramFull);
+        const precoMat = trP ? (mf.n === "64x88" ? parseFloat(trP.cells[1].querySelector('input').value) : parseFloat(trP.cells[2].querySelector('input').value)) : 0;
+        document.getElementById('pResma').value = precoMat;
+
+        let resHtml = ""; let zapList = "";
+        let escalas = isSerigrafia ? [500, 1000, 2000, 3000, 5000, qv] : [1, 5, 10, 20, 50, 100, qv];
+        
+        escalas.sort((x,y)=>x-y).filter((v,i,a)=>a.indexOf(v)===i).forEach(q => {
+            const tpec = q * qInt;
+            let cMaterial = isSerigrafia ? (q / 1000) * precoMat : (precoMat/500)*Math.ceil((tpec/map)*1.1);
+
+            const nc = parseInt(document.getElementById('esquemaCores').value);
+            const cChapas = isSerigrafia ? 0 : (nc * parseFloat(document.getElementById('baseChapa').value));
+            const cQuimica = ((tpec/1000) * gTintaProd * (pTintaKg/1000)) + ((gRetardador/1000) * pRetardKg);
             
-            const areaM2Peca = (L * A) / 10000;
-            const custoTintaLote = (areaM2Peca * cores) * custoTintaPorM2;
-
-            let escalas = [1, 5, 10, 20, 50, 100]; if(qPed>0 && !escalas.includes(qPed)) { escalas.push(qPed); escalas.sort((a,b)=>a-b); }
-
-            let html = "";
-            escalas.forEach(q => {
-                const totalPecas = q * qInt;
-                const fls = melhor.ap > 0 ? Math.ceil(totalPecas / melhor.ap) : 0;
-                const custoMat = (fls * 1.1) * (pResma / qResma);
-                const custoTintaTotal = totalPecas * custoTintaLote;
-                const custoAcab = acabamentosAtivos.reduce((s, a) => s + (a.preco * q), 0);
-                
-                const total = (q > 0) ? (custoMat + custoTintaTotal + custoFixoLote + custoAcab) * margemIntegrada : 0;
-                const isAtivo = q === qPed;
-                html += `<tr ${isAtivo?'style="background:#d1e7ff;font-weight:bold"':''}><td>${q}</td><td>R$${q>0?(total/q).toFixed(2):'0.00'}</td><td>R$${total.toFixed(2)}</td></tr>`;
-                if(isAtivo || (qPed==0 && q==1)) {
-                    document.getElementById('totalPrice').innerText = total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-                    document.getElementById('resRetirar').innerHTML = `UTILIZAR: <b>${fls}</b> fls | COMPRAR: <b>${Math.ceil(fls*1.1)}</b> fls`;
+            let cAcab = 0;
+            acabamentosAtivos.forEach(ac => {
+                const tr = Array.from(document.querySelectorAll('#tbodyAcab tr')).find(t => t.dataset.serv === ac);
+                if(tr) {
+                    const vB = parseFloat(tr.cells[1].querySelector('input').value) || 0, vM = parseFloat(tr.cells[2].querySelector('input').value) || 0;
+                    cAcab += (vB * q) + ((vM / 1000) * tpec);
                 }
             });
-            document.getElementById('tabela').innerHTML = html;
-        }
 
-        function addAcab() {
-            const sel = document.getElementById('selAcab'); if(!sel.value) return;
-            const [n, p] = sel.value.split('|'); 
-            if(!acabamentosAtivos.some(x=>x.nome==n)) { acabamentosAtivos.push({nome:n, preco:parseFloat(p)}); renderAcab(); calc(); }
-            sel.value = "";
-        }
+            const cProd = cChapas + cMaterial + cQuimica + cAcab + fBuscaVal + parseFloat(document.getElementById('baseSetup').value) + (hm * tp);
+            const m = parseFloat(document.getElementById('lucroPorcent').value) || 0, i = parseFloat(document.getElementById('impostoPorcent').value) || 0, c = parseFloat(document.getElementById('comissaoPorcent').value) || 0;
+            const finalExibir = cProd / ((100 - (m + i + c)) / 100);
+            
+            zapList += `* ${q} un — Total: R$ ${finalExibir.toFixed(2)}\n`;
 
-        function renderAcab() {
-            document.getElementById('listaAcab').innerHTML = acabamentosAtivos.map(a => `<div class="acab-item">${a.nome} (R$${a.preco.toFixed(2)}) <i class="fa fa-trash-can btn-del" onclick="removeAcab('${a.nome}')"></i></div>`).join('');
-        }
+            if(q === qv) {
+                document.getElementById('totalPrice').innerText = finalExibir.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                document.getElementById('tabelaResumoCustos').innerHTML = `
+                    <tr><td>Material</td><td class="val">R$ ${cMaterial.toFixed(2)}</td></tr>
+                    <tr><td>Química (Tinta/Ret)</td><td class="val">R$ ${cQuimica.toFixed(2)}</td></tr>
+                    ${isSerigrafia ? `<tr><td>Frete de Busca</td><td class="val">R$ ${fBuscaVal.toFixed(2)}</td></tr>` : `<tr><td>Chapas Offset</td><td class="val">R$ ${cChapas.toFixed(2)}</td></tr>`}
+                    <tr><td>Mão de Obra</td><td class="val">R$ ${(hm*tp).toFixed(2)}</td></tr>
+                    <tr class="total-line"><td>Custo Produção</td><td class="val">R$ ${cProd.toFixed(2)}</td></tr>`;
+                
+                if(isSerigrafia) {
+                    document.getElementById('resRetirar').innerHTML = `SACOLAS: ${q} un`;
+                    document.getElementById('resCorte').innerHTML = `Modo: Serigrafia`;
+                } else {
+                    const fc = Math.ceil((tpec/map)*1.1);
+                    document.getElementById('resRetirar').innerHTML = `COMPRAR: ${fc} fls | USO: ${Math.ceil(tpec/map)}`;
+                    document.getElementById('resCorte').innerHTML = `Aproveitamento: ${map} pçs/fl`;
+                }
+            }
+            resHtml += `<tr ${q===qv?'class="row-active"':''}><td>${q}</td><td>${(finalExibir/q).toFixed(2)}</td><td>${finalExibir.toFixed(2)}</td></tr>`;
+        });
+        document.getElementById('tabelaOrcamento').innerHTML = resHtml;
+        window.temp_zap_list = zapList;
 
-        function removeAcab(n) { acabamentosAtivos = acabamentosAtivos.filter(x=>x.nome!=n); renderAcab(); calc(); }
-        
-        function atualizaPrecoPapel() { 
-            const p = {sulfite75:22, couche90:38, couche150:70, couche210:105, couche250:125, couche300:150, sulfite180:85, sulfite240:110, reciclato180:95, adesivo:120}; 
-            document.getElementById('pResma').value = p[document.getElementById('papel').value]||0; calc(); 
+        const cv = document.getElementById('canvasLayout'), ct = cv.getContext('2d');
+        ct.clearRect(0,0,180,120);
+        if(!isSerigrafia) {
+            const s = Math.min(170/mf.w, 110/mf.h);
+            ct.strokeStyle="#ccc"; ct.strokeRect(5,5,mf.w*s,mf.h*s); ct.fillStyle="#ff5252";
+            for(let i=0; i<Math.floor(mf.w/ml); i++) for(let j=0; j<Math.floor(mf.h/ma); j++) ct.fillRect(5+(i*ml*s), 5+(j*ma*s), (ml*s)-1, (ma*s)-1);
         }
-        
-        window.onload = () => { calcDashboard(); renderAcab(); };
-    </script>
+    }
+
+    async function salvarHistoricoPlanilha() {
+        if(!document.getElementById('cliNome').value) return alert("Nome do cliente obrigatório!");
+        const dados = {
+            action: "salvar_orcamento",
+            cliente_nome: document.getElementById('cliNome').value,
+            produto_desc: document.getElementById('tipoServico').value,
+            qtd_venda: document.getElementById('qtdVenda').value,
+            valor_total: document.getElementById('totalPrice').innerText
+        };
+        try {
+            await fetch(URL_GOOGLE, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dados) });
+            alert("Enviado para o Histórico!");
+        } catch(e) { alert("Erro ao salvar."); }
+    }
+
+    function enviarWhatsApp() { 
+        const cli = document.getElementById('cliNome').value || "Cliente";
+        const msg = encodeURIComponent(`- PROPOSTA MC SERIGRAFIA -\nCLIENTE: ${cli}\n${window.temp_zap_list}TOTAL: ${document.getElementById('totalPrice').innerText}\nPix CNPJ 46.897.470.0001-09`); 
+        window.open(`https://wa.me/5551999713739?text=${msg}`); 
+    }
+
+    function gerarPDF() {
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        doc.setFillColor(0, 90, 171); doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text("MC SERIGRAFIA E GRÁFICA", 10, 15);
+        doc.setFontSize(9); doc.text("Porto Alegre - RS | WhatsApp: (51) 99971-3739", 10, 23);
+        doc.setTextColor(0, 0, 0); doc.setFontSize(11);
+        doc.text(`Cliente: ${document.getElementById('cliNome').value}`, 10, 45);
+        doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 160, 45);
+        doc.text(`Produto: ${document.getElementById('tipoServico').value}`, 10, 55);
+        doc.text(`VALOR TOTAL: ${document.getElementById('totalPrice').innerText}`, 10, 65);
+        doc.save(`Orcamento_MC.pdf`);
+    }
+
+    function syncDropdowns() {
+        const gs = document.getElementById('gramSelect'), sa = document.getElementById('selAcab');
+        const gv = gs.value; gs.innerHTML = ""; 
+        document.querySelectorAll('#tbodyPapel tr').forEach(tr => { 
+            gs.innerHTML += `<option value="${tr.dataset.gram}">${tr.dataset.gram}</option>`; 
+        });
+        if(gv) gs.value = gv; 
+        sa.innerHTML = '<option value="">-- Selecione --</option>'; 
+        document.querySelectorAll('#tbodyAcab tr').forEach(tr => { 
+            sa.innerHTML += `<option value="${tr.dataset.serv}">${tr.dataset.serv}</option>`; 
+        });
+    }
+
+    function addAcab() { 
+        let v = document.getElementById('selAcab').value; 
+        if(v && !acabamentosAtivos.includes(v)) { 
+            acabamentosAtivos.push(v); renderAcab(); saveAndCalc(); 
+        } 
+        document.getElementById('selAcab').value = ""; 
+    }
+
+    function renderAcab() { 
+        document.getElementById('listaAcab').innerHTML = acabamentosAtivos.map(a => `<div style="color:black; padding:5px; background:#f0f0f0; margin-top:5px; display:flex; justify-content:space-between"><span>${a}</span><i class="fa fa-trash" onclick="acabamentosAtivos.splice(acabamentosAtivos.indexOf('${a}'),1);renderAcab();saveAndCalc();" style="cursor:pointer"></i></div>`).join(''); 
+    }
+
+    function removeRow(btn) { btn.closest('tr').remove(); syncDropdowns(); saveAndCalc(); }
+
+    function addItem(type) {
+        const name = prompt("Nome:"); if(!name) return;
+        if(type==='papel') document.getElementById('tbodyPapel').insertAdjacentHTML('beforeend', `<tr data-gram="${name}"><td>${name}</td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
+        else if(type==='acabamento') document.getElementById('tbodyAcab').insertAdjacentHTML('beforeend', `<tr data-serv="${name}"><td>${name}</td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
+        syncDropdowns(); saveAndCalc();
+    }
+
+    function saveAndCalc() { 
+        const d = {}; 
+        camposBackup.forEach(id => { if(document.getElementById(id)) d[id] = document.getElementById(id).value; }); 
+        localStorage.setItem('mc_v20_save', JSON.stringify(d)); 
+        calc(); 
+    }
+
+    function carregarBackup() { 
+        const s = localStorage.getItem('mc_v20_save'); 
+        if(s) { 
+            const d = JSON.parse(s); 
+            Object.keys(d).forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = d[id]; }); 
+        } 
+    }
+
+    function novoOrcamento() { if(confirm("Limpar tela?")) { localStorage.removeItem('mc_v20_save'); location.reload(); } }
+
+    // AUTORUN SÊNIOR: CARREGA SEMPRE AO ENTRAR
+    window.onload = async () => { 
+        carregarBackup(); 
+        await puxarPrecosDaPlanilha(); 
+        setTimeout(calc, 500); 
+    };
+</script>
 </body>
 </html>
