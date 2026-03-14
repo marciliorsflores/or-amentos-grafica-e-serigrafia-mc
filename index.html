@@ -344,8 +344,7 @@
             }
         }
     }
-
-    function adicionarAoPedido() {
+function adicionarAoPedido() {
         const trAtiva = document.querySelector('#tabelaOrcamento tr.row-active');
         if (!trAtiva) { alert("Calcule o orçamento primeiro!"); return; }
 
@@ -426,9 +425,30 @@
         renderizarPedido();
         
         alert("Item adicionado ao pedido com sucesso!");
+        
+        // --- NOVA LÓGICA: ZERAR CAMPOS DO PRODUTO ---
+        document.getElementById('lar').value = "15";
+        document.getElementById('alt').value = "21";
+        document.getElementById('qtdInterna').value = "100";
+        document.getElementById('qtdVenda').value = "1";
+        document.getElementById('tempoProd').value = "0";
+        
+        // Limpa a lista de acabamentos
+        acabamentosAtivos = [];
+        renderAcab();
+        
+        // Volta os dropdowns para a primeira opção
+        if(document.getElementById('tipoServico').options.length > 0) document.getElementById('tipoServico').selectedIndex = 0;
+        if(document.getElementById('gramSelect').options.length > 0) document.getElementById('gramSelect').selectedIndex = 0;
+        document.getElementById('esquemaCores').selectedIndex = 0;
+        
+        // Roda a verificação de regras e zera os cálculos da tela
+        verificarProduto(false);
+        saveAndCalc();
+        
+        // Foca o mouse de volta no Produto para você já digitar o próximo
         document.getElementById('tipoServico').focus();
     }
-
     function renderizarPedido() {
         const tbody = document.getElementById('tbodyPedidoItens');
         tbody.innerHTML = "";
@@ -663,7 +683,7 @@
                             custoAcabM2 = (vB * 1); // 1x o valor da base para serviço
                             descriAcab = `> ${ac} (Base x 1 x Qtd Itens)`;
                         } else {
-                            custoAcabM2 = (vB * 100) * areaUn;
+                            custoAcabM2 = (vB * 10) * areaUn;
                             descriAcab = `> ${ac} (Base x 100 x M²)`;
                         }
 
