@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MC Serigrafia - Orçamentador V18.70 (Matemática de Cores Sacolas)</title>
+    <title>MC Serigrafia - Orçamentador V20.50 (Regra 1x Serviço Blindada)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
@@ -61,6 +61,8 @@
         .btn-whatsapp { background: var(--green-success); }
         .btn-blue-add { background: var(--bg-blue); color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .btn-del-trash { color: var(--red-delete); cursor: pointer; font-size: 11px; margin-left: 5px; }
+        
+        .input-locked { background-color: #e9ecef; border: 1px solid #ccc; color: #666; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -80,14 +82,10 @@
                     <div style="flex:2"><label>Endereço</label><input type="text" id="cliEndereco" oninput="saveAndCalc()"></div>
                     <div style="flex:0.5"><label>Nº</label><input type="text" id="cliNum" oninput="saveAndCalc()"></div>
                 </div>
-                <label>Produto (Digite 'Sacolas' para ativar modo sacolas)</label>
-                <input list="prod-list" id="tipoServico" value="Blocos / Talonários" oninput="verificarProduto(); saveAndCalc()">
-                <datalist id="prod-list">
-                    <option value="Blocos">
-                    <option value="Jogo Americano">
-                    <option value="Panfletos">
-                    <option value="Sacolas">
-                </datalist>
+                
+                <label>Produto / Serviço <button class="btn-blue-add" onclick="addProdutoLista()" style="padding:1px 5px; font-size:10px;" title="Adicionar novo produto a esta lista">+</button></label>
+                <select id="tipoServico" onchange="verificarProduto(false); saveAndCalc()"></select>
+                
                 <div style="display:flex; gap:5px">
                     <div style="flex:1"><label id="lblQtdInterna">Fls/Bloco</label><input type="number" id="qtdInterna" value="100" oninput="saveAndCalc()"></div>
                     <div style="flex:1"><label id="lblQtdVenda">Qtd Pedido</label><input type="number" id="qtdVenda" value="1" step="any" oninput="saveAndCalc()"></div>
@@ -99,9 +97,9 @@
             <div class="panel-header">2. Tamanho / Modelo</div>
             <div class="panel-body">
                 <div class="size-row">
-                    <input type="number" id="lar" class="size-input" value="15" oninput="saveAndCalc()">
+                    <input type="number" id="lar" class="size-input" value="15" oninput="saveAndCalc()" title="Largura em Centímetros">
                     <span>X</span>
-                    <input type="number" id="alt" class="size-input" value="21" oninput="saveAndCalc()">
+                    <input type="number" id="alt" class="size-input" value="21" oninput="saveAndCalc()" title="Altura em Centímetros">
                 </div>
                 <div class="info-box" id="resCorte">Aproveitamento: --</div>
                 <div class="buy-box" id="resRetirar">UTILIZAR: -- | COMPRAR: --</div>
@@ -110,12 +108,14 @@
         </div>
 
         <div class="panel">
-            <div class="panel-header">3. Papel e Tinta</div>
+            <div class="panel-header">3. Material e Tinta</div>
             <div class="panel-body">
-                <label>Tipo de Papel ou Sacola (Medida)</label>
-                <select id="gramSelect" onchange="mudarPapel()"></select>
+                <div id="wrapPapel">
+                    <label>Tipo de Papel, Sacola ou Mídia M²</label>
+                    <select id="gramSelect" onchange="mudarPapel()"></select>
+                </div>
                 
-                <label>Cores de Impressão (Aba Sacolas calcula R$ Auto)</label>
+                <label>Cores de Impressão (Serigrafia/Gráfica)</label>
                 <select id="esquemaCores" onchange="saveAndCalc()">
                     <optgroup label="Serigrafia / Sacolas">
                         <option value="1" data-extras="0">1x0 (1 Cor Base)</option>
@@ -129,10 +129,18 @@
                         <option value="8" data-extras="0">4x4 (Colorido F/V)</option>
                     </optgroup>
                 </select>
-                <label>Preço Base (R$)</label><input type="number" id="pResma" readonly style="background:#f0f0f0">
-                <label>Folhas na Resma</label><input type="number" id="qResma" value="500" oninput="saveAndCalc()">
-                <label>Gasto Tinta (g/1000 pçs)</label><input type="number" id="gastoTintaGramas" value="100" oninput="saveAndCalc()">
-                <label>Tempo Produção (Horas)</label><input type="number" id="tempoProd" value="1" step="0.5" oninput="saveAndCalc()">
+                
+                <div id="wrapConfigsPapel">
+                    <label>Preço Base Resma (R$)</label><input type="number" id="pResma" readonly style="background:#f0f0f0">
+                    <label>Folhas na Resma</label><input type="number" id="qResma" value="500" oninput="saveAndCalc()">
+                </div>
+                
+                <div id="wrapSerigrafiaGasto">
+                    <label>Gasto Tinta (g/1000 pçs)</label><input type="number" id="gastoTintaGramas" value="100" oninput="saveAndCalc()">
+                </div>
+                
+                <label>Tempo Produção Total do Pedido (Horas) - Digite 0 para zerar Mão de Obra</label>
+                <input type="number" id="tempoProd" value="0" step="0.5" oninput="saveAndCalc()">
             </div>
         </div>
 
@@ -153,8 +161,10 @@
         <div class="ref-card">
             <h4>Base e Setup <button class="btn-blue-add" onclick="addItem('setup')">+</button></h4>
             <div id="containerSetup">
-                <label>Chapa/Tela (R$)</label><input type="number" id="baseChapa" value="45.00" oninput="saveAndCalc()">
-                <label>Tinta KG (R$)</label><input type="number" id="baseTinta" value="100.00" oninput="saveAndCalc()">
+                <div id="wrapSetupSerigrafia">
+                    <label>Chapa/Tela (R$)</label><input type="number" id="baseChapa" value="45.00" oninput="saveAndCalc()">
+                    <label>Tinta KG (R$)</label><input type="number" id="baseTinta" value="100.00" oninput="saveAndCalc()">
+                </div>
                 <label>Setup Fixo (R$)</label><input type="number" id="baseSetup" value="40.00" oninput="saveAndCalc()">
             </div>
         </div>
@@ -163,21 +173,31 @@
             <div id="containerFixos">
                 <label>Pró-labore Marcílio</label><input type="number" id="proMarcilio" value="5000.00" oninput="saveAndCalc()">
                 <label>Contas Fixas</label><input type="number" id="contasFixas" value="1000.00" oninput="saveAndCalc()">
+                <label style="color:var(--bg-blue);">Salário Colaboradores</label><input type="number" id="salarioColab" value="0.00" oninput="saveAndCalc()" style="border:1px solid var(--bg-blue);">
                 <div style="display:flex; gap:4px">
                     <div style="flex:1"><label>Dias/Mês</label><input type="number" id="diasUteis" value="22" oninput="saveAndCalc()"></div>
                     <div style="flex:1"><label>Hrs/Dia</label><input type="number" id="horasDia" value="7" oninput="saveAndCalc()"></div>
                 </div>
-                <div style="font-size: 10px; margin-top: 5px;">Hora: <b id="valHoraMaquina">R$ 0,00</b></div>
+                <div style="font-size: 10px; margin-top: 5px;">Hora da Empresa: <b id="valHoraMaquina">R$ 0,00</b></div>
             </div>
         </div>
-        <div class="ref-card"><h4>Tabela Papéis / Sacolas <button class="btn-blue-add" onclick="addItem('papel')">+</button></h4><table class="ref-table"><thead><tr><th>Gr/Modelo</th><th>64x88 (Milheiro)</th><th>66x96</th><th></th></tr></thead><tbody id="tbodyPapel"></tbody></table></div>
+        
+        <div class="ref-card">
+            <h4>Tabela Produtos <button class="btn-blue-add" onclick="addItem('produto')" title="Adicionar Novo Produto">+</button></h4>
+            <table class="ref-table">
+                <thead><tr><th>Nome do Produto/Serviço</th><th></th></tr></thead>
+                <tbody id="tbodyProduto"></tbody>
+            </table>
+        </div>
+
+        <div class="ref-card"><h4>Tabela Papéis / Sacolas <button class="btn-blue-add" onclick="addItem('papel')">+</button></h4><table class="ref-table"><thead><tr><th>Gr/Modelo/Mídia</th><th>64x88 (ou M²)</th><th>66x96</th><th></th></tr></thead><tbody id="tbodyPapel"></tbody></table></div>
         <div class="ref-card"><h4>Tabela Acabam. <button class="btn-blue-add" onclick="addItem('acabamento')">+</button></h4><table class="ref-table"><thead><tr><th>Serv</th><th>Base</th><th>Mil</th><th></th></tr></thead><tbody id="tbodyAcab"></tbody></table></div>
         
         <div class="ref-card" style="background:#fff; border-left:5px solid var(--active-blue);">
             <h4 style="color:var(--text-dark); border-bottom:2px solid var(--active-blue);">Conferência Detalhada</h4>
             <table class="resumo-table" id="tabelaResumoCustos"></table>
             <hr>
-            <label style="color:var(--active-blue);">% LUCRO REAL</label><input type="number" id="lucroPorcent" value="30" oninput="saveAndCalc()">
+            <label style="color:var(--active-blue);">% LUCRO REAL</label><input type="number" id="lucroPorcent" value="30" oninput="saveAndCalc()" title="Você pode alterar este valor livremente">
             <label style="color:var(--sync-orange);">% IMPOSTO (NF)</label><input type="number" id="impostoPorcent" value="0" oninput="saveAndCalc()">
             <label style="color:#8e44ad;">% COMISSÃO</label><input type="number" id="comissaoPorcent" value="0" oninput="saveAndCalc()">
         </div>
@@ -215,11 +235,25 @@
     let acabamentosAtivos = [];
     let pedidoItens = [];
     
-    const URL_GOOGLE = "https://script.google.com/macros/s/AKfycbxfSOyxxb5MejpqY3EkCJ5wYaXce4q42yq434hdMAcc2KaAZZAOXOxrioH74-C4JQv8/exec";
-    const camposBackup = ['cliNome', 'cliDados', 'cliEmail', 'cliCep', 'cliEndereco', 'cliNum', 'tipoServico', 'qtdInterna', 'qtdVenda', 'lar', 'alt', 'lucroPorcent', 'impostoPorcent', 'comissaoPorcent', 'proMarcilio', 'contasFixas', 'diasUteis', 'horasDia', 'tempoProd', 'baseChapa', 'baseTinta', 'baseSetup', 'gastoTintaGramas', 'esquemaCores', 'qResma'];
+    const URL_GOOGLE = "https://script.google.com/macros/s/AKfycbzXwsNOs_SV6I8EqUXTYgv4xiY6dlNPTYe58YAWfSMQTME1EiUtfCdmH5l-klr-GETg/exec";
+    
+    const camposConfig = ['lucroPorcent', 'impostoPorcent', 'comissaoPorcent', 'proMarcilio', 'contasFixas', 'salarioColab', 'diasUteis', 'horasDia', 'baseChapa', 'baseTinta', 'baseSetup', 'gastoTintaGramas', 'qResma'];
+
+    function addProdutoLista() {
+        const novo = prompt("Digite o nome do novo Produto ou Serviço:");
+        if (novo) {
+            document.getElementById('tbodyProduto').insertAdjacentHTML('beforeend', `<tr data-nome="${novo}"><td>${novo}</td><td style="text-align:right;"><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
+            syncDropdowns();
+            document.getElementById('tipoServico').value = novo;
+            verificarProduto(false);
+            saveAndCalc();
+        }
+    }
 
     function mudarPapel() {
-        const prod = document.getElementById('tipoServico').value.toLowerCase();
+        const ts = document.getElementById('tipoServico');
+        if(!ts) return;
+        const prod = ts.value ? ts.value.toLowerCase() : "";
         const gramFull = document.getElementById('gramSelect').value || "";
         
         if (prod.includes("sacola") && gramFull) {
@@ -229,25 +263,86 @@
                 document.getElementById('alt').value = match[2];
             }
         }
+        verificarProduto(true); 
         saveAndCalc();
     }
 
-    function verificarProduto() {
-        const prod = document.getElementById('tipoServico').value.toLowerCase();
+    function verificarProduto(fromPapel = false) {
+        const ts = document.getElementById('tipoServico');
+        if(!ts.value) return;
+        const prod = ts.value.toLowerCase();
+        
+        const gs = document.getElementById('gramSelect');
+        const gramFull = gs && gs.value ? gs.value.toLowerCase() : "";
+        
         const lucroInput = document.getElementById('lucroPorcent');
         let lastProd = window.lastProdProduto || "";
         
         const isNowSacola = prod.includes("sacola");
         const wasSacola = lastProd.includes("sacola");
 
-        if (isNowSacola && !wasSacola) {
-            lucroInput.value = 20; 
-        } else if (!isNowSacola && wasSacola) {
-            lucroInput.value = 30; 
+        // Regra de Serviço Blindada
+        const isNowApenasServico = prod.includes("serviço") || prod.includes("servico") || prod.includes("acabamento") || gramFull.includes("sem material") || gramFull.includes("serviço") || gramFull.includes("servico");
+
+        const isNowM2 = isNowApenasServico || prod.includes("adesivo") || prod.includes("banner") || prod.includes("lona") || prod.includes("recorte") || prod.includes("vinil") || prod.includes("m²") || prod.includes("m2") || gramFull.includes("(m²)") || gramFull.includes("(m2)");
+
+        const wasM2 = lastProd.includes("adesivo") || lastProd.includes("banner") || lastProd.includes("lona") || lastProd.includes("recorte") || lastProd.includes("vinil") || lastProd.includes("serviço") || lastProd.includes("servico") || lastProd.includes("acabamento") || lastProd.includes("m²") || lastProd.includes("m2");
+
+        if (isNowM2) {
+            document.getElementById('wrapPapel').style.display = "block";
+            document.getElementById('wrapConfigsPapel').style.display = "none";
+            document.getElementById('wrapSerigrafiaGasto').style.display = "none";
+            document.getElementById('wrapSetupSerigrafia').style.display = "none";
+            document.getElementById('esquemaCores').disabled = true;
+            
+            lucroInput.classList.remove('input-locked');
+            lucroInput.readOnly = false;
+            lucroInput.title = "Lucro livre para alterar (Sugerido 20% para Comunicação Visual/Serviços)";
+            
+            if (!wasM2) { 
+                lucroInput.value = 20; 
+                
+                if(isNowApenasServico && gs) {
+                    for(let i=0; i<gs.options.length; i++) {
+                        if(gs.options[i].text.toLowerCase().includes("sem material")) {
+                            gs.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            document.getElementById('qtdInterna').value = 1;
+
+        } else {
+            document.getElementById('wrapPapel').style.display = "block";
+            document.getElementById('wrapConfigsPapel').style.display = "block";
+            document.getElementById('wrapSerigrafiaGasto').style.display = "block";
+            document.getElementById('wrapSetupSerigrafia').style.display = "block";
+            document.getElementById('esquemaCores').disabled = false;
+            
+            lucroInput.classList.remove('input-locked');
+            lucroInput.readOnly = false;
+            lucroInput.title = "";
+
+            if (isNowSacola && !wasSacola) {
+                lucroInput.value = 20; 
+            } else if (!isNowSacola && !isNowM2 && (wasSacola || wasM2)) {
+                lucroInput.value = 30; 
+            }
         }
-        
+
         window.lastProdProduto = prod;
-        mudarPapel(); 
+        
+        if (!fromPapel && gs) {
+            if(prod.includes("sacola") && gs.value) {
+                let match = gs.value.match(/(\d+)x(\d+)/);
+                if (match) {
+                    document.getElementById('lar').value = match[1];
+                    document.getElementById('alt').value = match[2];
+                }
+            }
+        }
     }
 
     function adicionarAoPedido() {
@@ -257,16 +352,25 @@
         const prod = document.getElementById('tipoServico').value;
         const lar = document.getElementById('lar').value;
         const alt = document.getElementById('alt').value;
-        const pap = document.getElementById('gramSelect').value;
         const miolo = document.getElementById('qtdInterna').value;
         const cor = document.getElementById('esquemaCores').options[document.getElementById('esquemaCores').selectedIndex].text;
         const impostoItem = document.getElementById('impostoPorcent').value || 0;
         const acabados = acabamentosAtivos.join(", ") || "Nenhum";
         
         const nomeProduto = prod.toLowerCase();
+        const gs = document.getElementById('gramSelect');
+        const gramFull = gs && gs.value ? gs.value.toLowerCase() : "";
+        
         const isSacola = nomeProduto.includes("sacola");
         
-        const qVendaFinal = isSacola ? parseInt(document.getElementById('qtdInterna').value) : parseInt(document.getElementById('qtdVenda').value);
+        const isApenasServico = nomeProduto.includes("serviço") || nomeProduto.includes("servico") || nomeProduto.includes("acabamento") || gramFull.includes("sem material") || gramFull.includes("serviço") || gramFull.includes("servico");
+        
+        const isM2 = isApenasServico || nomeProduto.includes("adesivo") || nomeProduto.includes("banner") || nomeProduto.includes("lona") || nomeProduto.includes("recorte") || nomeProduto.includes("m²") || nomeProduto.includes("m2") || gramFull.includes("(m²)") || gramFull.includes("(m2)");
+        
+        const pap = document.getElementById('gramSelect').value;
+        
+        let qVendaFinal = parseInt(document.getElementById('qtdVenda').value);
+        if (isSacola) qVendaFinal = parseInt(document.getElementById('qtdInterna').value);
         
         const totalItem = parseFloat(trAtiva.getAttribute('data-vlr-nota'));
         const unitItem = totalItem / qVendaFinal;
@@ -284,17 +388,27 @@
             }
         });
 
-        const textoEspecificacao = isSacola 
-            ? `${lar}x${alt}cm | ${pap} | Total Sacolas: ${miolo} | ${cor} | Acab: ${acabados}`
-            : `${lar}x${alt}cm | ${pap} | Miolo: ${miolo}fls | ${cor} | Acab: ${acabados}`;
+        let textoEspecificacao = "";
+        let mioloTexto = "";
+
+        if (isSacola) {
+            textoEspecificacao = `${lar}x${alt}cm | ${pap} | Total Sacolas: ${miolo} | ${cor} | Acab: ${acabados}`;
+            mioloTexto = "Total de Sacolas";
+        } else if (isM2) {
+            textoEspecificacao = `${lar}x${alt}cm | Material/Base: ${pap} | Total Pedido: ${qVendaFinal} un. | Acab: ${acabados}`;
+            mioloTexto = "Comunicação Visual / Serviço";
+        } else {
+            textoEspecificacao = `${lar}x${alt}cm | ${pap} | Miolo: ${miolo}fls | ${cor} | Acab: ${acabados}`;
+            mioloTexto = `${miolo} folhas cada`;
+        }
 
         const specsObj = {
             produto: prod,
             formato: `${lar}x${alt} cm`,
-            papel: pap || "sem uso de papel",
-            impressao: cor,
+            papel: pap || "Nenhum material",
+            impressao: isM2 ? "Digital / Instal." : cor,
             acabamentos: acabados || "Nenhum",
-            miolo: isSacola ? "Total de Sacolas" : `${miolo} folhas cada`
+            miolo: mioloTexto
         };
 
         const item = {
@@ -371,40 +485,62 @@
             const r = await fetch(URL_GOOGLE);
             const d = await r.json();
             const tbP = document.getElementById('tbodyPapel'); tbP.innerHTML = "";
-            let temSacolaNaPlanilha = false;
+            let temAdesivo = false;
 
-            d.papeis.forEach(p => { 
-                if(p.gram.toLowerCase().includes("sacola")) temSacolaNaPlanilha = true;
-                tbP.insertAdjacentHTML('beforeend', `<tr data-gram="${p.gram}"><td>${p.gram}</td><td><input type="number" value="${p.p64}" oninput="saveAndCalc()"></td><td><input type="number" value="${p.p66}" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`); 
-            });
+            if(d.papeis) {
+                d.papeis.forEach(p => { 
+                    if(p.gram.toLowerCase().includes("adesivo") || p.gram.toLowerCase().includes("vinil")) temAdesivo = true;
+                    tbP.insertAdjacentHTML('beforeend', `<tr data-gram="${p.gram}"><td>${p.gram}</td><td><input type="number" value="${p.p64}" oninput="saveAndCalc()"></td><td><input type="number" value="${p.p66}" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`); 
+                });
+            }
 
-            if(!temSacolaNaPlanilha) {
-                const sacolasPadrao = [
-                    { g: "Sacola Col. 20x30x0,08", p: 105.80 }, { g: "Sacola Col. 25x35x0,08", p: 161.00 }, { g: "Sacola Col. 30x40x0,08", p: 230.00 },
-                    { g: "Sacola Col. 36x48x0,09", p: 365.70 }, { g: "Sacola Col. 30x40x0,10", p: 276.00 }, { g: "Sacola Col. 40x50x0,10", p: 460.00 },
-                    { g: "Sacola Col. 16x22x0,13", p: 105.80 }, { g: "Sacola Col. 20x30x0,13", p: 184.00 }, { g: "Sacola Col. 25x35x0,13", p: 264.50 },
-                    { g: "Sacola Col. 30x40x0,13", p: 358.80 }, { g: "Sacola Col. 40x50x0,13", p: 598.00 }, { g: "Sacola AD 20x30x0,10", p: 147.00 },
-                    { g: "Sacola AD 25x35x0,12", p: 245.00 }, { g: "Sacola AD 30x40x0,13", p: 382.20 }, { g: "Sacola AD 36x48x0,14", p: 588.00 },
-                    { g: "Sacola AD 40x50x0,15", p: 735.00 }, { g: "Sacola AD 45x60x0,15", p: 980.00 }
+            if(!temAdesivo) {
+                const padroesCV = [
+                    { g: "Adesivo Vinil Branco (M²)", p: 160.00 }, { g: "Adesivo Vinil Transparente (M²)", p: 160.00 },
+                    { g: "Adesivo Recorte Plotter (M²)", p: 160.00 }, { g: "Lona Brilho 440g (M²)", p: 150.00 },
+                    { g: "Sem Material / Apenas Serviço (M²)", p: 0.00 }
                 ];
-                sacolasPadrao.forEach(s => {
+                padroesCV.forEach(s => {
                     tbP.insertAdjacentHTML('beforeend', `<tr data-gram="${s.g}"><td>${s.g}</td><td><input type="number" value="${s.p}" oninput="saveAndCalc()"></td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
                 });
             }
 
             const tbA = document.getElementById('tbodyAcab'); tbA.innerHTML = "";
-            d.acabamentos.forEach(a => { 
-                tbA.insertAdjacentHTML('beforeend', `<tr data-serv="${a.serv}"><td>${a.serv}</td><td><input type="number" value="${a.base}" oninput="saveAndCalc()"></td><td><input type="number" value="${a.mil}" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`); 
-            });
+            if(d.acabamentos) {
+                d.acabamentos.forEach(a => { 
+                    tbA.insertAdjacentHTML('beforeend', `<tr data-serv="${a.serv}"><td>${a.serv}</td><td><input type="number" value="${a.base}" oninput="saveAndCalc()"></td><td><input type="number" value="${a.mil}" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`); 
+                });
+            }
+
+            const tbProd = document.getElementById('tbodyProduto'); tbProd.innerHTML = "";
+            if (d.produtos && d.produtos.length > 0) {
+                d.produtos.forEach(pr => {
+                    tbProd.insertAdjacentHTML('beforeend', `<tr data-nome="${pr}"><td>${pr}</td><td style="text-align:right;"><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
+                });
+            } else {
+                const padroesProd = ["Adesivo Impresso", "Adesivo de Recorte", "Banner / Lona", "Prestação de Serviço", "Blocos / Talonários", "Panfletos / Folders", "Jogo Americano", "Cartões de Visita", "Sacolas Plásticas", "Sacolas de Papel"];
+                padroesProd.forEach(pr => {
+                    tbProd.insertAdjacentHTML('beforeend', `<tr data-nome="${pr}"><td>${pr}</td><td style="text-align:right;"><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
+                });
+            }
 
             syncDropdowns(); saveAndCalc();
         } catch(e) { console.log("Erro sync"); }
     }
 
     function calc() {
-        const nomeProduto = document.getElementById('tipoServico').value.toLowerCase();
+        const ts = document.getElementById('tipoServico');
+        if(!ts.value) return;
+        const nomeProduto = ts.value.toLowerCase();
+        
+        const gs = document.getElementById('gramSelect');
+        const gramFull = gs && gs.value ? gs.value.toLowerCase() : "";
+        
         const isSacola = nomeProduto.includes("sacola");
-        const isServicoPuro = nomeProduto.includes("serviço") || nomeProduto.includes("servico");
+        
+        const isApenasServico = nomeProduto.includes("serviço") || nomeProduto.includes("servico") || nomeProduto.includes("acabamento") || gramFull.includes("sem material") || gramFull.includes("serviço") || gramFull.includes("servico");
+
+        const isM2 = isApenasServico || nomeProduto.includes("adesivo") || nomeProduto.includes("banner") || nomeProduto.includes("lona") || nomeProduto.includes("recorte") || nomeProduto.includes("vinil") || nomeProduto.includes("m²") || nomeProduto.includes("m2") || gramFull.includes("(m²)") || gramFull.includes("(m2)");
 
         const lblQtdInterna = document.getElementById('lblQtdInterna');
         const lblQtdVenda = document.getElementById('lblQtdVenda');
@@ -412,12 +548,14 @@
         if (isSacola) {
             lblQtdInterna.innerText = "Total de Sacolas";
             lblQtdVenda.innerText = "Milheiros (Auto)";
-            
             if (document.activeElement.id === 'qtdInterna') {
                 document.getElementById('qtdVenda').value = (parseFloat(document.getElementById('qtdInterna').value) || 0) / 1000;
             } else if (document.activeElement.id === 'qtdVenda') {
                 document.getElementById('qtdInterna').value = (parseFloat(document.getElementById('qtdVenda').value) || 0) * 1000;
             }
+        } else if (isM2) {
+            lblQtdInterna.innerText = "Ignorado (M²)";
+            lblQtdVenda.innerText = "Qtd Pedido (Itens)";
         } else {
             lblQtdInterna.innerText = "Fls/Bloco";
             lblQtdVenda.innerText = "Qtd Pedido";
@@ -435,21 +573,28 @@
 
         const pro = parseFloat(document.getElementById('proMarcilio').value) || 0;
         const fix = parseFloat(document.getElementById('contasFixas').value) || 0;
+        const sal = parseFloat(document.getElementById('salarioColab').value) || 0;
         const dias = parseFloat(document.getElementById('diasUteis').value) || 1;
         const hDia = parseFloat(document.getElementById('horasDia').value) || 1;
-        const hm = (pro + fix) / (dias * hDia);
+        
+        const hm = (pro + fix + sal) / (dias * hDia);
         document.getElementById('valHoraMaquina').innerText = hm.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
         
-        const tp = parseFloat(document.getElementById('tempoProd').value) || 1, l = parseFloat(document.getElementById('lar').value) || 1, a = parseFloat(document.getElementById('alt').value) || 1;
-        const gramFull = document.getElementById('gramSelect').value || "";
-        const gTintaProd = parseFloat(document.getElementById('gastoTintaGramas').value) || 100, pTintaKg = parseFloat(document.getElementById('baseTinta').value) || 100;
+        const tpInput = document.getElementById('tempoProd').value;
+        const tp = tpInput === "" ? 0 : parseFloat(tpInput); 
+        const l = parseFloat(document.getElementById('lar').value) || 1;
+        const a = parseFloat(document.getElementById('alt').value) || 1;
+        
+        const originalGramFull = document.getElementById('gramSelect').value || "";
+        const gTintaProd = parseFloat(document.getElementById('gastoTintaGramas').value) || 100;
+        const pTintaKg = parseFloat(document.getElementById('baseTinta').value) || 100;
         const qr = parseFloat(document.getElementById('qResma').value) || 500;
         
         const formats = [{n:"64x88", w:64, h:88}, {n:"66x96", w:66, h:96}];
         let mf = formats[0], map = 0, ml = l, ma = a;
         let ap64 = 0, ap66 = 0; 
         
-        if (!isSacola && !isServicoPuro) {
+        if (!isSacola && !isM2) {
             formats.forEach(f => {
                 let ap1 = Math.floor(f.w/l)*Math.floor(f.h/a);
                 let ap2 = Math.floor(f.w/a)*Math.floor(f.h/l);
@@ -469,15 +614,17 @@
             map = 1; 
         }
 
-        const trP = Array.from(document.querySelectorAll('#tbodyPapel tr')).find(tr => tr.dataset.gram === gramFull);
+        const trP = Array.from(document.querySelectorAll('#tbodyPapel tr')).find(tr => tr.dataset.gram === originalGramFull);
         let pr = 0;
         if (trP) {
-            if (isSacola) { pr = parseFloat(trP.cells[1].querySelector('input').value) || 0; } 
-            else { pr = mf.n === "64x88" ? parseFloat(trP.cells[1].querySelector('input').value) : parseFloat(trP.cells[2].querySelector('input').value); }
+            if (isSacola || isM2) { 
+                pr = parseFloat(trP.cells[1].querySelector('input').value) || 0; 
+            } else { 
+                pr = mf.n === "64x88" ? parseFloat(trP.cells[1].querySelector('input').value) : parseFloat(trP.cells[2].querySelector('input').value); 
+            }
         }
         document.getElementById('pResma').value = pr;
 
-        // Leitura de Cores e Telas Extras
         const corOpt = document.getElementById('esquemaCores').options[document.getElementById('esquemaCores').selectedIndex];
         const nc = parseInt(corOpt.value) || 1; 
         const extraCoresPassadas = parseInt(corOpt.getAttribute('data-extras')) || 0;
@@ -487,73 +634,144 @@
 
         arrayQtd.sort((x,y)=>x-y).filter((v,i,arr)=>arr.indexOf(v)===i).forEach(q => {
             
-            let tpec = isSacola ? q : q * qInt;
-            let fc = 0; let cpap = 0;
+            let cProd = 0, finalS = 0, finalC = 0, finalExibir = 0;
+            let cpap = 0, fc = 0, ccha = 0, ctin = 0, cacabTotal = 0, cFrete = 0, cCoresExtrasAuto = 0;
+            let detAcab = "", htmlCustos = "";
+            let isTargetRow = false;
 
-            if (isServicoPuro) { cpap = 0; fc = 0; } 
-            else if (isSacola) { cpap = (tpec / 1000) * pr; fc = tpec; } 
-            else { fc = Math.ceil((tpec/map)*1.1); cpap = (pr/qr)*fc; }
+            if (isM2) {
+                isTargetRow = (q === qv);
+                
+                const areaUn = (l/100) * (a/100);
+                const vM2 = pr; 
+                const custoMatUnidade = areaUn * vM2;
+                
+                let divQv = qv > 0 ? qv : 1;
+                const opCostUnidade = hm * (tp / divQv);
+                const setupFixUnidade = (parseFloat(document.getElementById('baseSetup').value) || 0) / divQv;
 
-            const ccha = nc * (parseFloat(document.getElementById('baseChapa').value) || 0); // Telas
-            const ctin = (tpec/1000) * gTintaProd * (pTintaKg/1000) * (nc > 4 ? 2 : 1);
-            let cacabTotal = 0, detAcab = "";
-            
-            acabamentosAtivos.forEach(ac => {
-                const tr = Array.from(document.querySelectorAll('#tbodyAcab tr')).find(t => t.dataset.serv === ac);
-                if(tr) {
-                    const vB = parseFloat(tr.cells[1].querySelector('input').value) || 0, vM = parseFloat(tr.cells[2].querySelector('input').value) || 0;
-                    let c = isSacola ? (vB * 1) + ((vM / 1000) * tpec) : (vB * q) + ((vM / 1000) * (q * qInt));
-                    cacabTotal += c;
-                    let isTargetAcab = isSacola ? (q === qInt) : (q === qv);
-                    if(isTargetAcab) detAcab += `<tr><td style="padding-left:10px; font-style:italic;">> ${ac}</td><td class="val">R$ ${c.toFixed(2)}</td></tr>`;
+                let cacabUnidade = 0;
+                acabamentosAtivos.forEach(ac => {
+                    const tr = Array.from(document.querySelectorAll('#tbodyAcab tr')).find(t => t.dataset.serv === ac);
+                    if(tr) {
+                        const vB = parseFloat(tr.cells[1].querySelector('input').value) || 0;
+                        let custoAcabM2 = 0;
+                        let descriAcab = "";
+
+                        // AQUI ESTÁ A REGRA BLINDADA DO 1x SERVIÇO (Sem multiplicar por 100):
+                        if (isApenasServico) {
+                            custoAcabM2 = (vB * 1); // 1x o valor da base para serviço
+                            descriAcab = `> ${ac} (Base x 1 x Qtd Itens)`;
+                        } else {
+                            custoAcabM2 = (vB * 100) * areaUn;
+                            descriAcab = `> ${ac} (Base x 100 x M²)`;
+                        }
+
+                        cacabUnidade += custoAcabM2; 
+                        
+                        if (isTargetRow) detAcab += `<tr><td style="padding-left:10px; font-style:italic; color:#8e44ad;">${descriAcab}</td><td class="val" style="color:#8e44ad;">R$ ${(custoAcabM2 * q).toFixed(2)}</td></tr>`;
+                    }
+                });
+
+                const cProdUnidade = custoMatUnidade + opCostUnidade + setupFixUnidade + cacabUnidade;
+                
+                const m = parseFloat(document.getElementById('lucroPorcent').value) || 0; 
+                const i = parseFloat(document.getElementById('impostoPorcent').value) || 0;
+                const com = parseFloat(document.getElementById('comissaoPorcent').value) || 0;
+                
+                const divS = Math.max(0.01, (100-(m+com))/100);
+                const divC = Math.max(0.01, (100-(m+com+i))/100);
+                
+                cProd = cProdUnidade * q;
+                finalS = (cProdUnidade / divS) * q;
+                finalC = (cProdUnidade / divC) * q;
+                finalExibir = (i > 0 ? finalC : finalS);
+
+                cpap = custoMatUnidade * q;
+                fc = areaUn * q; 
+                cacabTotal = cacabUnidade * q;
+
+                if (isTargetRow) {
+                    if(vM2 > 0) {
+                        htmlCustos = `<tr><td>Material M² - ${originalGramFull} (${fc.toFixed(2)} m²)</td><td class="val">R$ ${cpap.toFixed(2)}</td></tr>`;
+                    } else if (isApenasServico) {
+                        htmlCustos = `<tr><td>Sem Custo de Material</td><td class="val">R$ 0,00</td></tr>`;
+                    }
+                    if (cacabUnidade > 0) htmlCustos += `<tr><td>Custo Acabamentos Extras</td><td class="val">R$ ${cacabTotal.toFixed(2)}</td></tr>${detAcab}`;
+                    if (tp > 0) htmlCustos += `<tr><td>Custo Operacional (Mão de Obra)</td><td class="val">R$ ${(opCostUnidade * q).toFixed(2)}</td></tr>`;
+                    else htmlCustos += `<tr><td>Custo Operacional (ZERADO)</td><td class="val">R$ 0,00</td></tr>`;
+                    htmlCustos += `<tr class="total-line"><td>Total Custo</td><td class="val">R$ ${cProd.toFixed(2)}</td></tr>`;
+                    
+                    if (isApenasServico) {
+                        document.getElementById('resRetirar').innerHTML = `PRODUÇÃO: ${q} itens | TEMPO TOTAL: ${tp} Horas`;
+                        document.getElementById('resCorte').innerHTML = `Modo: <b>PRESTAÇÃO DE SERVIÇOS</b><br><span style="font-size:10px; color:#0d47a1;">Acabamentos calculados por Quantidade de Itens (Un)</span>`;
+                    } else {
+                        document.getElementById('resRetirar').innerHTML = `PRODUÇÃO: ${q} itens | ÁREA TOTAL: ${fc.toFixed(2)} M²`;
+                        document.getElementById('resCorte').innerHTML = `Modo: <b>COMUNICAÇÃO VISUAL (M²)</b><br><span style="font-size:10px; color:#0d47a1;">Lendo R$ ${vM2.toFixed(2)}/m² da coluna 64x88 na tabela</span>`;
+                    }
                 }
-            });
 
-            // Lógica do Custo Automático de Cores (220,00 por milheiro por cor extra)
-            let cCoresExtrasAuto = isSacola ? (extraCoresPassadas * 220.00 * (tpec / 1000)) : 0;
+            } else {
+                isTargetRow = isSacola ? (q === qInt) : (q === qv);
+                let tpec = isSacola ? q : q * qInt;
 
-            const baseSetupFix = parseFloat(document.getElementById('baseSetup').value) || 0;
-            const cFrete = isSacola ? 150 : 0; 
-            const cProd = ccha + cpap + ctin + cacabTotal + baseSetupFix + cFrete + cCoresExtrasAuto + (hm * tp);
-            
-            const m = parseFloat(document.getElementById('lucroPorcent').value) || 0;
-            const i = parseFloat(document.getElementById('impostoPorcent').value) || 0;
-            const com = parseFloat(document.getElementById('comissaoPorcent').value) || 0;
-            
-            const divS = Math.max(0.01, (100-(m+com))/100);
-            const divC = Math.max(0.01, (100-(m+com+i))/100);
-            
-            const finalS = cProd / divS;
-            const finalC = cProd / divC;
-            const finalExibir = (i > 0 ? finalC : finalS);
-            
-            zapList += `* ${isSacola ? q + ' un' : q + ' un (' + qInt + ' fls)'} — Total: R$ ${finalExibir.toFixed(2)}\n`;
+                if (isSacola) { 
+                    cpap = (tpec / 1000) * pr; fc = tpec; 
+                } else { 
+                    fc = Math.ceil((tpec/map)*1.1); cpap = (pr/qr)*fc; 
+                }
 
-            let isTargetRow = isSacola ? (q === qInt) : (q === qv);
+                ccha = nc * (parseFloat(document.getElementById('baseChapa').value) || 0);
+                ctin = (tpec/1000) * gTintaProd * (pTintaKg/1000) * (nc > 4 ? 2 : 1);
+                cCoresExtrasAuto = isSacola ? (extraCoresPassadas * 220.00 * (tpec / 1000)) : 0;
+                const baseSetupFix = parseFloat(document.getElementById('baseSetup').value) || 0;
+                cFrete = isSacola ? 150 : 0;
 
-            if(isTargetRow) {
+                acabamentosAtivos.forEach(ac => {
+                    const tr = Array.from(document.querySelectorAll('#tbodyAcab tr')).find(t => t.dataset.serv === ac);
+                    if(tr) {
+                        const vB = parseFloat(tr.cells[1].querySelector('input').value) || 0, vM = parseFloat(tr.cells[2].querySelector('input').value) || 0;
+                        let c = isSacola ? (vB * 1) + ((vM / 1000) * tpec) : (vB * q) + ((vM / 1000) * (q * qInt));
+                        cacabTotal += c;
+                        if(isTargetRow) detAcab += `<tr><td style="padding-left:10px; font-style:italic;">> ${ac}</td><td class="val">R$ ${c.toFixed(2)}</td></tr>`;
+                    }
+                });
+
+                cProd = ccha + cpap + ctin + cacabTotal + baseSetupFix + cFrete + cCoresExtrasAuto + (hm * tp);
+                
+                const m = parseFloat(document.getElementById('lucroPorcent').value) || 0;
+                const i = parseFloat(document.getElementById('impostoPorcent').value) || 0;
+                const com = parseFloat(document.getElementById('comissaoPorcent').value) || 0;
+                
+                const divS = Math.max(0.01, (100-(m+com))/100);
+                const divC = Math.max(0.01, (100-(m+com+i))/100);
+                
+                finalS = cProd / divS;
+                finalC = cProd / divC;
+                finalExibir = (i > 0 ? finalC : finalS);
+
+                if (isTargetRow) {
+                    let labelMaterial = isSacola ? `Sacolas (${fc} un)` : `Papel (${fc} fls)`;
+                    htmlCustos = `<tr><td>${labelMaterial}</td><td class="val">R$ ${cpap.toFixed(2)}</td></tr>`;
+                    if (isSacola) htmlCustos += `<tr><td>Frete Transportadora (SP)</td><td class="val">R$ ${cFrete.toFixed(2)}</td></tr>`;
+                    htmlCustos += `<tr><td>Telas/Chapas (${nc} un)</td><td class="val">R$ ${ccha.toFixed(2)}</td></tr>`;
+                    if (isSacola && cCoresExtrasAuto > 0) htmlCustos += `<tr><td style="color:var(--sync-orange); font-weight:bold;">Adicional Cores Extras (${extraCoresPassadas}x 220)</td><td class="val" style="color:var(--sync-orange);">R$ ${cCoresExtrasAuto.toFixed(2)}</td></tr>`;
+                    htmlCustos += `<tr><td>Tinta Serigráfica (${gTintaProd}g)</td><td class="val">R$ ${ctin.toFixed(2)}</td></tr>`;
+                    if(cacabTotal > 0) htmlCustos += `<tr><td>Acabamentos Extra</td><td class="val">R$ ${cacabTotal.toFixed(2)}</td></tr>${detAcab}`;
+                    if(tp > 0) htmlCustos += `<tr><td>Custo Operacional Fixado (HM)</td><td class="val">R$ ${(hm*tp).toFixed(2)}</td></tr>`;
+                    else htmlCustos += `<tr><td>Custo Operacional (ZERADO)</td><td class="val">R$ 0,00</td></tr>`;
+                    htmlCustos += `<tr class="total-line"><td>Total Custo</td><td class="val">R$ ${cProd.toFixed(2)}</td></tr>`;
+                    
+                    if (isSacola) document.getElementById('resRetirar').innerHTML = `PRODUZIR: ${tpec} un | FRETE R$ 150 INCLUSO`;
+                    else document.getElementById('resRetirar').innerHTML = `UTILIZAR: ${Math.ceil(tpec/map)} fls | COMPRAR: ${fc} fls`;
+                }
+            }
+
+            zapList += `* ${isSacola ? q + ' un' : (isM2 ? q + ' un' : q + ' un (' + qInt + ' fls/vias)')} — Total: R$ ${finalExibir.toFixed(2)}\n`;
+
+            if (isTargetRow) {
                 document.getElementById('totalPrice').innerText = finalExibir.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-                
-                let labelMaterial = isSacola ? `Sacolas (${fc} un)` : `Papel (${fc} fls)`;
-                let htmlCustos = `<tr><td>${labelMaterial}</td><td class="val">R$ ${cpap.toFixed(2)}</td></tr>`;
-                if (isSacola) htmlCustos += `<tr><td>Frete Transportadora (SP)</td><td class="val">R$ ${cFrete.toFixed(2)}</td></tr>`;
-                htmlCustos += `<tr><td>Telas/Chapas (${nc} un)</td><td class="val">R$ ${ccha.toFixed(2)}</td></tr>`;
-                
-                // Exibe os 220,00 ou 440,00 detalhados na tabela para você conferir
-                if (isSacola && cCoresExtrasAuto > 0) {
-                    htmlCustos += `<tr><td style="color:var(--sync-orange); font-weight:bold;">Adicional Cores Extras (${extraCoresPassadas}x 220)</td><td class="val" style="color:var(--sync-orange);">R$ ${cCoresExtrasAuto.toFixed(2)}</td></tr>`;
-                }
-
-                htmlCustos += `<tr><td>Tinta (${gTintaProd}g)</td><td class="val">R$ ${ctin.toFixed(2)}</td></tr>`;
-                if(cacabTotal > 0) htmlCustos += `<tr><td>Acabamentos Extra</td><td class="val">R$ ${cacabTotal.toFixed(2)}</td></tr>${detAcab}`;
-                htmlCustos += `<tr><td>Mão de Obra Fixa</td><td class="val">R$ ${(hm*tp).toFixed(2)}</td></tr>`;
-                htmlCustos += `<tr class="total-line"><td>Total Custo</td><td class="val">R$ ${cProd.toFixed(2)}</td></tr>`;
-                
                 document.getElementById('tabelaResumoCustos').innerHTML = htmlCustos;
-
-                if (isSacola) document.getElementById('resRetirar').innerHTML = `PRODUZIR: ${tpec} un | FRETE R$ 150 INCLUSO`;
-                else if (isServicoPuro) document.getElementById('resRetirar').innerHTML = `MODO: PRESTAÇÃO DE SERVIÇO`;
-                else document.getElementById('resRetirar').innerHTML = `UTILIZAR: ${Math.ceil(tpec/map)} fls | COMPRAR: ${fc} fls`;
             }
 
             resHtml += `<tr ${isTargetRow?'class="row-active"':''} data-vlr-nota="${finalC.toFixed(2)}" data-vlr-snf="${finalS.toFixed(2)}" data-unit="${(finalExibir/q).toFixed(2)}"><td>${q}</td><td>${(finalExibir/q).toFixed(2)}</td><td>${finalExibir.toFixed(2)}</td></tr>`;
@@ -567,19 +785,18 @@
 
         if (isSacola) {
             document.getElementById('resCorte').innerHTML = `Modo: <b>SACOLAS PLÁSTICAS</b><br><span style="font-size:10px; color:#0d47a1;">Lendo preço do milheiro na coluna 64x88</span>`;
+            let corSacola = originalGramFull.toLowerCase().includes(" ad ") ? "#fbc02d" : "#e67e22";
+            ct.fillStyle = corSacola; ct.fillRect(55, 20, 70, 85); ct.fillStyle = "white"; ct.beginPath(); ct.ellipse(90, 32, 12, 4, 0, 0, Math.PI*2); ct.fill();
+            ct.fillStyle = "white"; ct.font = "bold 14px Arial"; ct.fillText(l + "x" + a, 65, 80); 
             
-            let corSacola = gramFull.toLowerCase().includes(" ad ") ? "#fbc02d" : "#e67e22";
-            ct.fillStyle = corSacola; 
-            ct.fillRect(55, 20, 70, 85); 
-            ct.fillStyle = "white"; 
-            ct.beginPath(); 
-            ct.ellipse(90, 32, 12, 4, 0, 0, Math.PI*2); 
-            ct.fill();
-            ct.fillStyle = "white"; 
-            ct.font = "bold 14px Arial"; 
-            ct.fillText(l + "x" + a, 65, 80); 
-            
-        } else if (!isServicoPuro && map > 0) {
+        } else if (isM2 && !isApenasServico) {
+            ct.fillStyle = "#8e44ad"; ct.fillRect(30, 20, 120, 80); 
+            ct.fillStyle = "white"; ct.font = "bold 14px Arial"; ct.fillText(l + "x" + a, 70, 60); 
+
+        } else if (isApenasServico) {
+            ct.fillStyle = "#34495e"; ct.fillRect(30, 20, 120, 80); 
+            ct.fillStyle = "white"; ct.font = "bold 14px Arial"; ct.fillText("SERVIÇO", 60, 60);
+        } else if (map > 0) {
             const s = Math.min(170/mf.w, 110/mf.h);
             ct.strokeStyle="#ccc"; ct.strokeRect(5,5,mf.w*s,mf.h*s); ct.fillStyle="#ff5252";
             for(let j=0; j<Math.floor(mf.w/ml); j++) for(let k=0; k<Math.floor(mf.h/ma); k++) ct.fillRect(5+(j*ml*s), 5+(k*ma*s), (ml*s)-1, (ma*s)-1);
@@ -591,7 +808,10 @@
         const cli = document.getElementById('cliNome').value;
         if(!cli) { alert("Nome do cliente obrigatório!"); return; }
         const fullEnd = `${document.getElementById('cliEndereco').value}, ${document.getElementById('cliNum').value} - CEP: ${document.getElementById('cliCep').value}`;
-        let desc = document.getElementById('tipoServico').value;
+        
+        const ts = document.getElementById('tipoServico');
+        let desc = ts ? ts.value : "";
+        
         let valorT = document.getElementById('totalPrice').innerText;
         let qVenda = document.getElementById('qtdVenda').value;
 
@@ -612,9 +832,22 @@
     async function salvarNaPlanilhaADM() {
         const senha = prompt("Senha ADM:"); 
         if(senha !== "1234") { alert("Senha Incorreta!"); return; }
+        
         const p = []; document.querySelectorAll('#tbodyPapel tr').forEach(tr => { p.push([tr.dataset.gram, tr.cells[1].querySelector('input').value, tr.cells[2].querySelector('input').value]); });
         const a = []; document.querySelectorAll('#tbodyAcab tr').forEach(tr => { a.push([tr.dataset.serv, tr.cells[1].querySelector('input').value, tr.cells[2].querySelector('input').value]); });
-        try { await fetch(URL_GOOGLE, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "update_config", papeis: p, acabamentos: a }) }); alert("Tabelas atualizadas na planilha!"); } catch(e) { alert("Erro ao salvar preços."); }
+        
+        const prod = []; document.querySelectorAll('#tbodyProduto tr').forEach(tr => { prod.push([tr.dataset.nome]); });
+        
+        try { 
+            await fetch(URL_GOOGLE, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify({ action: "update_config", papeis: p, acabamentos: a, produtos: prod }) 
+            }); 
+            alert("Tabelas atualizadas na planilha!"); 
+        } catch(e) { 
+            alert("Erro ao salvar preços."); 
+        }
     }
 
     function enviarWhatsApp() { 
@@ -684,10 +917,10 @@
             doc.setFontSize(9);
             doc.text(`• Produto: ${item.specsObj.produto}`, 15, yTable); yTable += 5;
             doc.text(`• Formato: ${item.specsObj.formato}`, 15, yTable); yTable += 5;
-            doc.text(`• Papel/Modelo: ${item.specsObj.papel}`, 15, yTable); yTable += 5;
+            doc.text(`• Material: ${item.specsObj.papel}`, 15, yTable); yTable += 5;
             doc.text(`• Impressão: ${item.specsObj.impressao}`, 15, yTable); yTable += 5;
             doc.text(`• Acabamentos: ${item.specsObj.acabamentos}`, 15, yTable); yTable += 5;
-            doc.text(`• Miolo: ${item.specsObj.miolo}`, 15, yTable); yTable += 8;
+            doc.text(`• Volume/Detalhe: ${item.specsObj.miolo}`, 15, yTable); yTable += 8;
             
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
@@ -729,7 +962,7 @@
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
             yTable += 2;
-            doc.text(`VALOR TOTAL (Qtd Escolhida ${item.qtd} un): R$ ${item.total.toFixed(2).replace('.', ',')}`, 10, yTable);
+            doc.text(`VALOR TOTAL (Qtd Escolhida ${item.qtd}): R$ ${item.total.toFixed(2).replace('.', ',')}`, 10, yTable);
             
             yTable += 12; 
         });
@@ -752,9 +985,18 @@
     }
 
     function syncDropdowns() {
-        const gs = document.getElementById('gramSelect'), sa = document.getElementById('selAcab');
-        const gv = gs.value; gs.innerHTML = ""; document.querySelectorAll('#tbodyPapel tr').forEach(tr => { gs.innerHTML += `<option value="${tr.dataset.gram}">${tr.dataset.gram}</option>`; });
-        if(gv) gs.value = gv; sa.innerHTML = '<option value="">-- Selecione --</option>'; document.querySelectorAll('#tbodyAcab tr').forEach(tr => { sa.innerHTML += `<option value="${tr.dataset.serv}">${tr.dataset.serv}</option>`; });
+        const gs = document.getElementById('gramSelect'), sa = document.getElementById('selAcab'), ts = document.getElementById('tipoServico');
+        
+        const gv = gs.value; gs.innerHTML = ""; 
+        document.querySelectorAll('#tbodyPapel tr').forEach(tr => { gs.innerHTML += `<option value="${tr.dataset.gram}">${tr.dataset.gram}</option>`; });
+        if(gv) gs.value = gv; 
+        
+        sa.innerHTML = '<option value="">-- Selecione --</option>'; 
+        document.querySelectorAll('#tbodyAcab tr').forEach(tr => { sa.innerHTML += `<option value="${tr.dataset.serv}">${tr.dataset.serv}</option>`; });
+        
+        const tv = ts.value; ts.innerHTML = "";
+        document.querySelectorAll('#tbodyProduto tr').forEach(tr => { ts.innerHTML += `<option value="${tr.dataset.nome}">${tr.dataset.nome}</option>`; });
+        if(tv) ts.value = tv;
     }
     
     function addAcab() { let v = document.getElementById('selAcab').value; if(v && !acabamentosAtivos.includes(v)) { acabamentosAtivos.push(v); renderAcab(); saveAndCalc(); } document.getElementById('selAcab').value = ""; }
@@ -768,23 +1010,34 @@
         if(type==='setup'||type==='fixos') document.getElementById(type==='setup'?'containerSetup':'containerFixos').insertAdjacentHTML('beforeend', `<div style="display:flex; justify-content:space-between; align-items:center;"><label>${name}</label><i class="fa fa-trash btn-del-trash" onclick="this.parentElement.nextElementSibling.remove(); this.parentElement.remove(); saveAndCalc();"></i></div><input type="number" value="0" oninput="saveAndCalc()">`);
         else if(type==='papel') document.getElementById('tbodyPapel').insertAdjacentHTML('beforeend', `<tr data-gram="${name}"><td>${name}</td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
         else if(type==='acabamento') document.getElementById('tbodyAcab').insertAdjacentHTML('beforeend', `<tr data-serv="${name}"><td>${name}</td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><input type="number" value="0" oninput="saveAndCalc()"></td><td><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
+        else if(type==='produto') document.getElementById('tbodyProduto').insertAdjacentHTML('beforeend', `<tr data-nome="${name}"><td>${name}</td><td style="text-align:right;"><i class="fa fa-trash btn-del-trash" onclick="removeRow(this)"></i></td></tr>`);
         syncDropdowns(); saveAndCalc();
     }
     
-    function saveAndCalc() { const d = {}; camposBackup.forEach(id => { if(document.getElementById(id)) d[id] = document.getElementById(id).value; }); localStorage.setItem('mc_v18_save', JSON.stringify(d)); calc(); }
+    function saveAndCalc() { 
+        const d = {}; 
+        camposConfig.forEach(id => { if(document.getElementById(id)) d[id] = document.getElementById(id).value; }); 
+        localStorage.setItem('mc_v20_config', JSON.stringify(d)); 
+        calc(); 
+    }
     
-    function carregarBackup() { const s = localStorage.getItem('mc_v18_save'); if(s) { const d = JSON.parse(s); Object.keys(d).forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = d[id]; }); } }
+    function carregarBackup() { 
+        const s = localStorage.getItem('mc_v20_config'); 
+        if(s) { 
+            const d = JSON.parse(s); 
+            Object.keys(d).forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = d[id]; }); 
+        } 
+    }
     
     function novoOrcamento() { 
-        if(confirm("Limpar toda a tela e o carrinho de pedidos?")) { 
-            localStorage.removeItem('mc_v18_save'); 
-            pedidoItens = []; document.getElementById('qtdVenda').value = 0; document.getElementById('qtdInterna').value = 0; location.reload(); 
+        if(confirm("Deseja limpar toda a tela e iniciar um novo orçamento zerado?")) { 
+            location.reload(); 
         } 
     }
 
     window.onload = () => { carregarBackup(); puxarPrecosDaPlanilha(); setTimeout(calc, 800); };
 </script>
 
-<div style="display:none;"><table id="tbodyPapel"></table><table id="tbodyAcab"></table></div>
+<div style="display:none;"><table id="tbodyPapel"></table><table id="tbodyAcab"></table><table id="tbodyProduto"></table></div>
 </body>
 </html>
