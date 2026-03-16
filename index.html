@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MC Serigrafia - Orçamentador V22.30 (Final com Histórico Automático)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
+<style>
+    /* Estilo para esconder o app antes do login */
+    #main-app { display: none; }
+    #auth-container { 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: #005aab; display: flex; align-items: center; justify-content: center; z-index: 10000; 
+    }
+    .auth-box { background: white; padding: 30px; border-radius: 8px; width: 300px; text-align: center; color: #333; }
+    .auth-box input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .auth-btn { width: 100%; padding: 12px; background: #005aab; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+</style>
     <style>
         :root { 
             --bg-blue: #005aab; --active-blue: #0078d7; --text-dark: #333; 
@@ -73,212 +86,265 @@
 </head>
 <body>
 
-<div class="main-container">
-    <div class="top-panels">
-        <div class="panel">
-            <div class="panel-header"><span>1. Cliente e Pedido</span><button onclick="novoOrcamento()" style="background:red; color:white; border:none; padding:2px 6px; cursor:pointer; font-size:10px; border-radius:3px;">LIMPAR TUDO</button></div>
-            <div class="panel-body">
-                <label>Nome do Cliente</label><input type="text" id="cliNome" oninput="saveAndCalc()">
-                <div style="display:flex; gap:5px">
-                    <div style="flex:1"><label>WhatsApp/CNPJ</label><input type="text" id="cliDados" oninput="saveAndCalc()"></div>
-                    <div style="flex:1"><label>E-mail</label><input type="email" id="cliEmail" oninput="saveAndCalc()"></div>
-                </div>
-                <div style="display:flex; gap:5px">
-                    <div style="flex:1"><label>CEP</label><input type="text" id="cliCep" maxlength="9" onblur="buscarEndereco()" placeholder="00000-000"></div>
-                    <div style="flex:2"><label>Endereço</label><input type="text" id="cliEndereco" oninput="saveAndCalc()"></div>
-                    <div style="flex:0.5"><label>Nº</label><input type="text" id="cliNum" oninput="saveAndCalc()"></div>
-                </div>
-                
-                <label>Produto / Serviço <button class="btn-blue-add" onclick="addProdutoLista()" style="padding:1px 5px; font-size:10px;" title="Adicionar novo produto a esta lista">+</button></label>
-                <select id="tipoServico" onchange="verificarProduto(false); saveAndCalc()"></select>
-                
-                <div style="display:flex; gap:5px">
-                    <div style="flex:1"><label id="lblQtdInterna" style="color:var(--bg-blue);">Fls/Bloco</label><input type="number" id="qtdInterna" value="100" oninput="saveAndCalc()" style="border:1px solid var(--bg-blue); font-weight:bold;"></div>
-                    <div style="flex:1"><label id="lblQtdVenda">Qtd Pedido</label><input type="number" id="qtdVenda" value="1" step="any" oninput="saveAndCalc()"></div>
+    <body>
+    <div id="auth-container">
+        <div class="auth-box">
+            <h2>MC Serigrafia</h2>
+            <input type="email" id="auth-email" placeholder="E-mail">
+            <input type="password" id="auth-pass" placeholder="Senha">
+            <button class="auth-btn" onclick="handleAuth()">ENTRAR</button>
+            <p style="font-size:11px; margin-top:10px; cursor:pointer;" onclick="isReg=!isReg; this.innerText=isReg?'Ir para Login':'Criar Conta'">Criar conta gratuita</p>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <div class="main-container">
+
+</div>
+<div id="main-app">
+   </div>
+    <div class="main-container">
+        <div class="top-panels">
+            <div class="panel">
+                <div class="panel-header"><span>1. Cliente e Pedido</span><button onclick="novoOrcamento()" style="background:red; color:white; border:none; padding:2px 6px; cursor:pointer; font-size:10px; border-radius:3px;">LIMPAR TUDO</button></div>
+                <div class="panel-body">
+                    <label>Nome do Cliente</label><input type="text" id="cliNome" oninput="saveAndCalc()">
+                    <div style="display:flex; gap:5px">
+                        <div style="flex:1"><label>WhatsApp/CNPJ</label><input type="text" id="cliDados" oninput="saveAndCalc()"></div>
+                        <div style="flex:1"><label>E-mail</label><input type="email" id="cliEmail" oninput="saveAndCalc()"></div>
+                    </div>
+                    <div style="display:flex; gap:5px">
+                        <div style="flex:1"><label>CEP</label><input type="text" id="cliCep" maxlength="9" onblur="buscarEndereco()" placeholder="00000-000"></div>
+                        <div style="flex:2"><label>Endereço</label><input type="text" id="cliEndereco" oninput="saveAndCalc()"></div>
+                        <div style="flex:0.5"><label>Nº</label><input type="text" id="cliNum" oninput="saveAndCalc()"></div>
+                    </div>
+                    
+                    <label>Produto / Serviço <button class="btn-blue-add" onclick="addProdutoLista()" style="padding:1px 5px; font-size:10px;" title="Adicionar novo produto a esta lista">+</button></label>
+                    <select id="tipoServico" onchange="verificarProduto(false); saveAndCalc()"></select>
+                    
+                    <div style="display:flex; gap:5px">
+                        <div style="flex:1"><label id="lblQtdInterna" style="color:var(--bg-blue);">Fls/Bloco</label><input type="number" id="qtdInterna" value="100" oninput="saveAndCalc()" style="border:1px solid var(--bg-blue); font-weight:bold;"></div>
+                        <div style="flex:1"><label id="lblQtdVenda">Qtd Pedido</label><input type="number" id="qtdVenda" value="1" step="any" oninput="saveAndCalc()"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="panel">
-            <div class="panel-header">2. Tamanho / Modelo</div>
-            <div class="panel-body">
-                
-                <div class="size-row" id="wrapTamanhoPadrao">
-                    <input type="number" id="lar" class="size-input" value="15" oninput="window.isBoxMode=false; window.isBagMode=false; saveAndCalc()" title="Largura em Centímetros">
-                    <span>X</span>
-                    <input type="number" id="alt" class="size-input" value="21" oninput="window.isBoxMode=false; window.isBagMode=false; saveAndCalc()" title="Altura em Centímetros">
+            <div class="panel">
+                <div class="panel-header">2. Tamanho / Modelo</div>
+                <div class="panel-body">
+                    
+                    <div class="size-row" id="wrapTamanhoPadrao">
+                        <input type="number" id="lar" class="size-input" value="15" oninput="window.isBoxMode=false; window.isBagMode=false; saveAndCalc()" title="Largura em Centímetros">
+                        <span>X</span>
+                        <input type="number" id="alt" class="size-input" value="21" oninput="window.isBoxMode=false; window.isBagMode=false; saveAndCalc()" title="Altura em Centímetros">
+                    </div>
+                    
+                    <div class="box-calculator" id="wrapCaixa3D" style="display:none;">
+                        <div class="box-title"><i class="fa fa-cube"></i> Conversor de Caixa 3D Inteligente</div>
+                        <div style="margin-bottom: 8px;">
+                            <label style="margin-top:0;">Modelo da Caixa / Faca</label>
+                            <select id="cxModelo" onchange="mudarModeloCaixa()" style="margin-top:2px; padding: 4px; font-size: 11px; font-weight: bold; color: var(--bg-blue);">
+                                <option value="caixa_tampa_conj">Caixa Completa (1 Faca Conjugada)</option>
+                                <option value="caixa_tampa_sep">Caixa Completa (2 Facas Separadas)</option>
+                                <option value="so_caixa">Só Caixa / Fundo (1 Peça)</option>
+                                <option value="so_tampa">Só Tampa (1 Peça)</option>
+                            </select>
+                        </div>
+                        <div class="box-grid">
+                            <div><label title="Comprimento final da caixa">Compr. (C)</label><input type="number" id="cxComp" value="30"></div>
+                            <div><label title="Largura final da caixa">Largura (L)</label><input type="number" id="cxLarg" value="20"></div>
+                            <div id="divAltFundo"><label title="Altura da parte de baixo">Alt. Fundo</label><input type="number" id="cxAltF" value="5"></div>
+                            <div id="divAltTampa"><label title="Altura apenas da tampa">Alt. Tampa</label><input type="number" id="cxAltT" value="4"></div>
+                        </div>
+                        <div style="font-size: 8px; color: #666; margin-top: 4px; text-align: right;">Abas de colagem e folgas incluídas</div>
+                        <div class="box-buttons">
+                            <button id="btnBoxAction" class="btn-box" onclick="planificarCaixa()"><i class="fa fa-magic"></i> CALCULAR CAIXA 2D</button>
+                        </div>
+                    </div>
+
+                    <div class="bag-calculator" id="wrapSacolaPapel3D" style="display:none;">
+                        <div class="bag-title">
+                            <span><i class="fa fa-shopping-bag"></i> Faca: Sacola de Papel</span>
+                            <a href="https://www.templatemaker.nl/pt/bag/" target="_blank" style="font-size: 9px; color: #d35400; text-decoration: underline;">Ver TemplateMaker</a>
+                        </div>
+                        <div class="bag-grid">
+                            <div><label title="Frente da sacola (Largura visual)">Compr. Frente</label><input type="number" id="sacComp" value="25"></div>
+                            <div><label title="Sanfona / Fundo da sacola">Larg. Lateral</label><input type="number" id="sacLarg" value="10"></div>
+                            <div><label title="Altura final montada">Altura (Alt)</label><input type="number" id="sacAlt" value="35"></div>
+                        </div>
+                        <div style="font-size: 8px; color: #666; margin-top: 4px; text-align: right;">(Dobras de reforço da boca e colagem do fundo embutidas)</div>
+                        <button class="btn-bag" onclick="planificarSacolaPapel()" style="width: 100%;"><i class="fa fa-magic"></i> CALCULAR PLANIFICAÇÃO</button>
+                    </div>
+
+                    <div class="info-box" id="resCorte">Aproveitamento: --</div>
+                    <div class="buy-box" id="resRetirar">UTILIZAR: -- | COMPRAR: --</div>
+                    <div class="layout-container"><canvas id="canvasLayout" width="240" height="140"></canvas></div>
                 </div>
-                
-                <div class="box-calculator" id="wrapCaixa3D" style="display:none;">
-                    <div class="box-title"><i class="fa fa-cube"></i> Conversor de Caixa 3D Inteligente</div>
-                    <div style="margin-bottom: 8px;">
-                        <label style="margin-top:0;">Modelo da Caixa / Faca</label>
-                        <select id="cxModelo" onchange="mudarModeloCaixa()" style="margin-top:2px; padding: 4px; font-size: 11px; font-weight: bold; color: var(--bg-blue);">
-                            <option value="caixa_tampa_conj">Caixa Completa (1 Faca Conjugada)</option>
-                            <option value="caixa_tampa_sep">Caixa Completa (2 Facas Separadas)</option>
-                            <option value="so_caixa">Só Caixa / Fundo (1 Peça)</option>
-                            <option value="so_tampa">Só Tampa (1 Peça)</option>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">3. Material e Tinta</div>
+                <div class="panel-body">
+                    <div id="wrapPapel">
+                        <label>Tipo de Papel, Sacola ou Mídia M²</label>
+                        <select id="gramSelect" onchange="mudarPapel()"></select>
+                    </div>
+                    
+                    <div id="wrapCores">
+                        <label>Cores de Impressão (Serigrafia/Gráfica)</label>
+                        <select id="esquemaCores" onchange="saveAndCalc()">
+                            <optgroup label="Serigrafia / Sacolas">
+                                <option value="1" data-extras="0">1x0 (1 Cor Base)</option>
+                                <option value="2" data-extras="1">2x0 (2 Cores Frente)</option>
+                                <option value="2" data-extras="1">1x1 (1 Cor F/V)</option>
+                                <option value="4" data-extras="2">2x2 (2 Cores F/V)</option>
+                            </optgroup>
+                            <optgroup label="Offset / Gráfica (CMYK)">
+                                <option value="4" data-extras="0">4x0 (Colorido Frente)</option>
+                                <option value="5" data-extras="0">4x1 (Frente Color / Verso PB)</option>
+                                <option value="8" data-extras="0">4x4 (Colorido F/V)</option>
+                            </optgroup>
                         </select>
                     </div>
-                    <div class="box-grid">
-                        <div><label title="Comprimento final da caixa">Compr. (C)</label><input type="number" id="cxComp" value="30"></div>
-                        <div><label title="Largura final da caixa">Largura (L)</label><input type="number" id="cxLarg" value="20"></div>
-                        <div id="divAltFundo"><label title="Altura da parte de baixo">Alt. Fundo</label><input type="number" id="cxAltF" value="5"></div>
-                        <div id="divAltTampa"><label title="Altura apenas da tampa">Alt. Tampa</label><input type="number" id="cxAltT" value="4"></div>
+                    
+                    <div id="wrapConfigsPapel">
+                        <label>Preço Base Resma (R$)</label><input type="number" id="pResma" readonly style="background:#f0f0f0">
+                        <label>Folhas na Resma</label><input type="number" id="qResma" value="500" oninput="saveAndCalc()">
                     </div>
-                    <div style="font-size: 8px; color: #666; margin-top: 4px; text-align: right;">Abas de colagem e folgas incluídas</div>
-                    <div class="box-buttons">
-                        <button id="btnBoxAction" class="btn-box" onclick="planificarCaixa()"><i class="fa fa-magic"></i> CALCULAR CAIXA 2D</button>
+                    
+                    <div id="wrapSerigrafiaGasto">
+                        <label>Gasto Tinta (g/1000 pçs)</label><input type="number" id="gastoTintaGramas" value="100" oninput="saveAndCalc()">
                     </div>
+                    
+                    <label>Tempo Produção Total do Pedido (Horas) - Digite 0 para zerar Mão de Obra</label>
+                    <input type="number" id="tempoProd" value="0" step="0.5" oninput="saveAndCalc()">
                 </div>
+            </div>
 
-                <div class="bag-calculator" id="wrapSacolaPapel3D" style="display:none;">
-                    <div class="bag-title">
-                        <span><i class="fa fa-shopping-bag"></i> Faca: Sacola de Papel</span>
-                        <a href="https://www.templatemaker.nl/pt/bag/" target="_blank" style="font-size: 9px; color: #d35400; text-decoration: underline;">Ver TemplateMaker</a>
-                    </div>
-                    <div class="bag-grid">
-                        <div><label title="Frente da sacola (Largura visual)">Compr. Frente</label><input type="number" id="sacComp" value="25"></div>
-                        <div><label title="Sanfona / Fundo da sacola">Larg. Lateral</label><input type="number" id="sacLarg" value="10"></div>
-                        <div><label title="Altura final montada">Altura (Alt)</label><input type="number" id="sacAlt" value="35"></div>
-                    </div>
-                    <div style="font-size: 8px; color: #666; margin-top: 4px; text-align: right;">(Dobras de reforço da boca e colagem do fundo embutidas)</div>
-                    <button class="btn-bag" onclick="planificarSacolaPapel()" style="width: 100%;"><i class="fa fa-magic"></i> CALCULAR PLANIFICAÇÃO</button>
+            <div class="panel">
+                <div class="panel-header">4. Acabamentos Selecionados</div>
+                <div class="panel-body">
+                    <label>Adicionar Serviço Extra</label><select id="selAcab" onchange="addAcab()"></select>
+                    <div id="listaAcab" style="margin-bottom:10px;"></div>
+                    <table class="price-table">
+                        <thead><tr><th>QTD</th><th>UNIT.</th><th>TOTAL</th></tr></thead>
+                        <tbody id="tabelaOrcamento"></tbody>
+                    </table>
                 </div>
-
-                <div class="info-box" id="resCorte">Aproveitamento: --</div>
-                <div class="buy-box" id="resRetirar">UTILIZAR: -- | COMPRAR: --</div>
-                <div class="layout-container"><canvas id="canvasLayout" width="240" height="140"></canvas></div>
             </div>
         </div>
 
-        <div class="panel">
-            <div class="panel-header">3. Material e Tinta</div>
-            <div class="panel-body">
-                <div id="wrapPapel">
-                    <label>Tipo de Papel, Sacola ou Mídia M²</label>
-                    <select id="gramSelect" onchange="mudarPapel()"></select>
+        <div class="bottom-section">
+            <div class="ref-card">
+                <h4>Base e Setup <button class="btn-blue-add" onclick="addItem('setup')">+</button></h4>
+                <div id="containerSetup">
+                    <div id="wrapSetupSerigrafia">
+                        <label>Chapa/Tela (R$)</label><input type="number" id="baseChapa" value="45.00" oninput="saveAndCalc()">
+                        <label>Tinta KG (R$)</label><input type="number" id="baseTinta" value="100.00" oninput="saveAndCalc()">
+                    </div>
+                    <label>Setup Fixo (R$)</label><input type="number" id="baseSetup" value="40.00" oninput="saveAndCalc()">
                 </div>
-                
-                <div id="wrapCores">
-                    <label>Cores de Impressão (Serigrafia/Gráfica)</label>
-                    <select id="esquemaCores" onchange="saveAndCalc()">
-                        <optgroup label="Serigrafia / Sacolas">
-                            <option value="1" data-extras="0">1x0 (1 Cor Base)</option>
-                            <option value="2" data-extras="1">2x0 (2 Cores Frente)</option>
-                            <option value="2" data-extras="1">1x1 (1 Cor F/V)</option>
-                            <option value="4" data-extras="2">2x2 (2 Cores F/V)</option>
-                        </optgroup>
-                        <optgroup label="Offset / Gráfica (CMYK)">
-                            <option value="4" data-extras="0">4x0 (Colorido Frente)</option>
-                            <option value="5" data-extras="0">4x1 (Frente Color / Verso PB)</option>
-                            <option value="8" data-extras="0">4x4 (Colorido F/V)</option>
-                        </optgroup>
-                    </select>
-                </div>
-                
-                <div id="wrapConfigsPapel">
-                    <label>Preço Base Resma (R$)</label><input type="number" id="pResma" readonly style="background:#f0f0f0">
-                    <label>Folhas na Resma</label><input type="number" id="qResma" value="500" oninput="saveAndCalc()">
-                </div>
-                
-                <div id="wrapSerigrafiaGasto">
-                    <label>Gasto Tinta (g/1000 pçs)</label><input type="number" id="gastoTintaGramas" value="100" oninput="saveAndCalc()">
-                </div>
-                
-                <label>Tempo Produção Total do Pedido (Horas) - Digite 0 para zerar Mão de Obra</label>
-                <input type="number" id="tempoProd" value="0" step="0.5" oninput="saveAndCalc()">
             </div>
-        </div>
-
-        <div class="panel">
-            <div class="panel-header">4. Acabamentos Selecionados</div>
-            <div class="panel-body">
-                <label>Adicionar Serviço Extra</label><select id="selAcab" onchange="addAcab()"></select>
-                <div id="listaAcab" style="margin-bottom:10px;"></div>
-                <table class="price-table">
-                    <thead><tr><th>QTD</th><th>UNIT.</th><th>TOTAL</th></tr></thead>
-                    <tbody id="tabelaOrcamento"></tbody>
+            <div class="ref-card">
+                <h4>Custos Fixos <button class="btn-blue-add" onclick="addItem('fixos')">+</button></h4>
+                <div id="containerFixos">
+                    <label>Pró-labore Marcílio</label><input type="number" id="proMarcilio" value="5000.00" oninput="saveAndCalc()">
+                    <label>Contas Fixas</label><input type="number" id="contasFixas" value="1000.00" oninput="saveAndCalc()">
+                    <label style="color:var(--bg-blue);">Salário Colaboradores</label><input type="number" id="salarioColab" value="0.00" oninput="saveAndCalc()" style="border:1px solid var(--bg-blue);">
+                    <div style="display:flex; gap:4px">
+                        <div style="flex:1"><label>Dias/Mês</label><input type="number" id="diasUteis" value="22" oninput="saveAndCalc()"></div>
+                        <div style="flex:1"><label>Hrs/Dia</label><input type="number" id="horasDia" value="7" oninput="saveAndCalc()"></div>
+                    </div>
+                    <div style="font-size: 10px; margin-top: 5px;">Hora da Empresa: <b id="valHoraMaquina">R$ 0,00</b></div>
+                </div>
+            </div>
+            
+            <div class="ref-card">
+                <h4>Tabela Produtos <button class="btn-blue-add" onclick="addItem('produto')" title="Adicionar Novo Produto">+</button></h4>
+                <table class="ref-table">
+                    <thead><tr><th>Nome do Produto/Serviço</th><th></th></tr></thead>
+                    <tbody id="tbodyProduto"></tbody>
                 </table>
             </div>
-        </div>
-    </div>
 
-    <div class="bottom-section">
-        <div class="ref-card">
-            <h4>Base e Setup <button class="btn-blue-add" onclick="addItem('setup')">+</button></h4>
-            <div id="containerSetup">
-                <div id="wrapSetupSerigrafia">
-                    <label>Chapa/Tela (R$)</label><input type="number" id="baseChapa" value="45.00" oninput="saveAndCalc()">
-                    <label>Tinta KG (R$)</label><input type="number" id="baseTinta" value="100.00" oninput="saveAndCalc()">
+            <div class="ref-card"><h4>Tabela Papéis / Mídias <button class="btn-blue-add" onclick="addItem('papel')">+</button></h4><table class="ref-table"><thead><tr><th>Gr/Modelo/Mídia</th><th>64x88 (ou M²)</th><th>66x96</th><th></th></tr></thead><tbody id="tbodyPapel"></tbody></table></div>
+            <div class="ref-card"><h4>Tabela Acabam. <button class="btn-blue-add" onclick="addItem('acabamento')">+</button></h4><table class="ref-table"><thead><tr><th>Serv</th><th>Base</th><th>Mil</th><th></th></tr></thead><tbody id="tbodyAcab"></tbody></table></div>
+            
+            <div class="ref-card" style="background:#fff; border-left:5px solid var(--active-blue);">
+                <h4 style="color:var(--text-dark); border-bottom:2px solid var(--active-blue);">Conferência Detalhada</h4>
+                <table class="resumo-table" id="tabelaResumoCustos"></table>
+                <hr>
+                <label style="color:var(--active-blue);">% LUCRO REAL</label><input type="number" id="lucroPorcent" value="30" oninput="saveAndCalc()" title="Você pode alterar este valor livremente">
+                <label style="color:var(--sync-orange);">% IMPOSTO (NF)</label><input type="number" id="impostoPorcent" value="0" oninput="saveAndCalc()">
+                <label style="color:#8e44ad;">% COMISSÃO</label><input type="number" id="comissaoPorcent" value="0" oninput="saveAndCalc()">
+            </div>
+
+            <div class="ref-card cart-card" style="background:#fff; border:2px solid var(--green-success);">
+                <h4 style="color:var(--green-success); border-bottom:2px solid var(--green-success);"><i class="fa fa-shopping-cart"></i> Lista de Itens do Pedido</h4>
+                <table class="resumo-table" style="width: 100%; margin-top: 5px;">
+                    <thead>
+                        <tr><th>Produto / Specs</th><th style="text-align:center;">Qtd</th><th style="text-align:center;">Unit.</th><th style="text-align:right;">Total</th><th></th></tr>
+                    </thead>
+                    <tbody id="tbodyPedidoItens">
+                        <tr><td colspan="5" style="text-align:center; color:#999; padding: 15px;">Nenhum item adicionado ao pedido ainda.</td></tr>
+                    </tbody>
+                </table>
+                <div style="text-align: right; margin-top: 15px; font-size: 16px; font-weight: bold; color: var(--text-dark);">
+                    TOTAL GERAL: <span id="granTotalPedido" style="color: var(--green-success);">R$ 0,00</span>
                 </div>
-                <label>Setup Fixo (R$)</label><input type="number" id="baseSetup" value="40.00" oninput="saveAndCalc()">
-            </div>
-        </div>
-        <div class="ref-card">
-            <h4>Custos Fixos <button class="btn-blue-add" onclick="addItem('fixos')">+</button></h4>
-            <div id="containerFixos">
-                <label>Pró-labore Marcílio</label><input type="number" id="proMarcilio" value="5000.00" oninput="saveAndCalc()">
-                <label>Contas Fixas</label><input type="number" id="contasFixas" value="1000.00" oninput="saveAndCalc()">
-                <label style="color:var(--bg-blue);">Salário Colaboradores</label><input type="number" id="salarioColab" value="0.00" oninput="saveAndCalc()" style="border:1px solid var(--bg-blue);">
-                <div style="display:flex; gap:4px">
-                    <div style="flex:1"><label>Dias/Mês</label><input type="number" id="diasUteis" value="22" oninput="saveAndCalc()"></div>
-                    <div style="flex:1"><label>Hrs/Dia</label><input type="number" id="horasDia" value="7" oninput="saveAndCalc()"></div>
-                </div>
-                <div style="font-size: 10px; margin-top: 5px;">Hora da Empresa: <b id="valHoraMaquina">R$ 0,00</b></div>
-            </div>
-        </div>
-        
-        <div class="ref-card">
-            <h4>Tabela Produtos <button class="btn-blue-add" onclick="addItem('produto')" title="Adicionar Novo Produto">+</button></h4>
-            <table class="ref-table">
-                <thead><tr><th>Nome do Produto/Serviço</th><th></th></tr></thead>
-                <tbody id="tbodyProduto"></tbody>
-            </table>
-        </div>
-
-        <div class="ref-card"><h4>Tabela Papéis / Mídias <button class="btn-blue-add" onclick="addItem('papel')">+</button></h4><table class="ref-table"><thead><tr><th>Gr/Modelo/Mídia</th><th>64x88 (ou M²)</th><th>66x96</th><th></th></tr></thead><tbody id="tbodyPapel"></tbody></table></div>
-        <div class="ref-card"><h4>Tabela Acabam. <button class="btn-blue-add" onclick="addItem('acabamento')">+</button></h4><table class="ref-table"><thead><tr><th>Serv</th><th>Base</th><th>Mil</th><th></th></tr></thead><tbody id="tbodyAcab"></tbody></table></div>
-        
-        <div class="ref-card" style="background:#fff; border-left:5px solid var(--active-blue);">
-            <h4 style="color:var(--text-dark); border-bottom:2px solid var(--active-blue);">Conferência Detalhada</h4>
-            <table class="resumo-table" id="tabelaResumoCustos"></table>
-            <hr>
-            <label style="color:var(--active-blue);">% LUCRO REAL</label><input type="number" id="lucroPorcent" value="30" oninput="saveAndCalc()" title="Você pode alterar este valor livremente">
-            <label style="color:var(--sync-orange);">% IMPOSTO (NF)</label><input type="number" id="impostoPorcent" value="0" oninput="saveAndCalc()">
-            <label style="color:#8e44ad;">% COMISSÃO</label><input type="number" id="comissaoPorcent" value="0" oninput="saveAndCalc()">
-        </div>
-
-        <div class="ref-card cart-card" style="background:#fff; border:2px solid var(--green-success);">
-            <h4 style="color:var(--green-success); border-bottom:2px solid var(--green-success);"><i class="fa fa-shopping-cart"></i> Lista de Itens do Pedido</h4>
-            <table class="resumo-table" style="width: 100%; margin-top: 5px;">
-                <thead>
-                    <tr><th>Produto / Specs</th><th style="text-align:center;">Qtd</th><th style="text-align:center;">Unit.</th><th style="text-align:right;">Total</th><th></th></tr>
-                </thead>
-                <tbody id="tbodyPedidoItens">
-                    <tr><td colspan="5" style="text-align:center; color:#999; padding: 15px;">Nenhum item adicionado ao pedido ainda.</td></tr>
-                </tbody>
-            </table>
-            <div style="text-align: right; margin-top: 15px; font-size: 16px; font-weight: bold; color: var(--text-dark);">
-                TOTAL GERAL: <span id="granTotalPedido" style="color: var(--green-success);">R$ 0,00</span>
             </div>
         </div>
     </div>
-</div>
 
-<div class="footer-floating">
-    <div class="final-price-value" id="totalPrice" style="font-size: 32px;">R$ 0,00</div>
-    <div class="btn-group">
-        <button class="btn-action btn-add-pedido" title="Adicionar ao Carrinho" onclick="adicionarAoPedido()"><i class="fa fa-cart-plus"></i> ADD ITEM AO PEDIDO</button>
-        <button class="btn-action btn-sync" title="Puxar Preços da Planilha" onclick="puxarPrecosDaPlanilha()"><i class="fa fa-sync"></i></button>
-        <button class="btn-action btn-save-hist" onclick="salvarHistoricoPlanilha(true)"><i class="fa fa-cloud-upload"></i> HISTÓRICO</button>
-        <button class="btn-action btn-save-plan" onclick="salvarNaPlanilhaADM()"><i class="fa fa-cogs"></i> PREÇOS ADM</button>
-        <button class="btn-action btn-pdf" onclick="gerarPDF()"><i class="fa fa-file-pdf"></i> GERAR PDF</button>
-        <button class="btn-action btn-whatsapp" onclick="enviarWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR ZAP</button>
+    <div class="footer-floating">
+        <div class="final-price-value" id="totalPrice" style="font-size: 32px;">R$ 0,00</div>
+        <div class="btn-group">
+            <button class="btn-action btn-add-pedido" title="Adicionar ao Carrinho" onclick="adicionarAoPedido()"><i class="fa fa-cart-plus"></i> ADD ITEM AO PEDIDO</button>
+            <button class="btn-action btn-sync" title="Puxar Preços da Planilha" onclick="puxarPrecosDaPlanilha()"><i class="fa fa-sync"></i></button>
+            <button class="btn-action btn-save-hist" onclick="salvarHistoricoPlanilha(true)"><i class="fa fa-cloud-upload"></i> HISTÓRICO</button>
+            <button class="btn-action btn-save-plan" onclick="saveToCloud()" style="background:#3498db">
+    <i class="fa fa-cloud-upload"></i> SALVAR NA NUVEM
+</button>
+            <button class="btn-action btn-pdf" onclick="gerarPDF()"><i class="fa fa-file-pdf"></i> GERAR PDF</button>
+            <button class="btn-action btn-whatsapp" onclick="enviarWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR ZAP</button>
+        </div>
     </div>
-</div>
+    </div>
 
 <script>
+    const firebaseConfig = {
+    apiKey: "AIzaSyBa15QojIYjCm5dTqzLXHa4R_myAzYrPEw",
+    authDomain: "precifica-7e047.firebaseapp.com",
+    projectId: "precifica-7e047",
+    storageBucket: "precifica-7e047.firebasestorage.app",
+    messagingSenderId: "1021698485607",
+    appId: "1:1021698485607:web:7909523579ab95869ad3c2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let isReg = false;
+
+async function handleAuth() {
+    const e = document.getElementById('auth-email').value, p = document.getElementById('auth-pass').value;
+    try {
+        if(isReg) await auth.createUserWithEmailAndPassword(e, p);
+        else await auth.signInWithEmailAndPassword(e, p);
+    } catch(err) { alert(err.message); }
+}
+
+auth.onAuthStateChanged((user) => {
+    if(user) {
+        document.getElementById('auth-container').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        loadFromCloud(); // Carrega os dados assim que logar
+    } else {
+        document.getElementById('auth-container').style.display = 'flex';
+        document.getElementById('main-app').style.display = 'none';
+    }
+});
+
     let acabamentosAtivos = []; let pedidoItens = [];
     const URL_GOOGLE = "https://script.google.com/macros/s/AKfycbzXwsNOs_SV6I8EqUXTYgv4xiY6dlNPTYe58YAWfSMQTME1EiUtfCdmH5l-klr-GETg/exec";
     const camposConfig = ['lucroPorcent', 'impostoPorcent', 'comissaoPorcent', 'proMarcilio', 'contasFixas', 'salarioColab', 'diasUteis', 'horasDia', 'baseChapa', 'baseTinta', 'baseSetup', 'gastoTintaGramas', 'qResma'];
@@ -933,6 +999,64 @@
     function novoOrcamento() { if(confirm("Deseja limpar toda a tela e iniciar um novo orçamento zerado?")) { location.reload(); } }
 
     window.onload = () => { carregarBackup(); puxarPrecosDaPlanilha(); setTimeout(calc, 800); };
+
+   async function loadFromCloud() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const docSnap = await db.collection("usuarios").doc(user.uid).get();
+
+    if (docSnap.exists) {
+        const d = docSnap.data();
+
+        // 1. Carrega os Papéis
+        if (d.papeis) {
+            const tbP = document.getElementById('tbodyPapel');
+            tbP.innerHTML = "";
+            d.papeis.forEach(p => {
+                tbP.insertAdjacentHTML('beforeend', `<tr data-gram="${p.g}"><td>${p.g}</td><td><input type="number" value="${p.p64}"></td><td><input type="number" value="${p.p66}"></td></tr>`);
+            });
+        }
+
+        // 2. Carrega os Acabamentos
+        if (d.acabamentos) {
+            const tbA = document.getElementById('tbodyAcab');
+            tbA.innerHTML = "";
+            d.acabamentos.forEach(a => {
+                tbA.insertAdjacentHTML('beforeend', `<tr data-serv="${a.s}"><td>${a.s}</td><td><input type="number" value="${a.b}"></td><td><input type="number" value="${a.m}"></td></tr>`);
+            });
+        }
+
+        // 3. Carrega os Dados da Empresa (O "pulo do gato" para seus amigos)
+       doc.setTextColor(100, 100, 100); doc.setFontSize(8); 
+        // Aqui ele puxa o Pix que estiver salvo na tela
+        doc.text(`Pagamento via Pix: ${pixEmpresa}`, 105, yTable + 30, {align: "center"}); 
+
+        const blobURL = doc.output('bloburl'); window.open(blobURL, '_blank');
+
+        syncDropdowns(); // Atualiza as listas de seleção
+        saveAndCalc();   // Recalcula tudo com os preços novos
+    } else {
+        // Se for o primeiro acesso do seu amigo e não tiver nada na nuvem:
+        puxarPrecosDaPlanilha(); 
+    }
+}
+
+async function loadFromCloud() {
+    const docSnap = await db.collection("usuarios").doc(auth.currentUser.uid).get();
+    if(docSnap.exists) {
+        const d = docSnap.data();
+        const tbP = document.getElementById('tbodyPapel'); 
+        tbP.innerHTML = "";
+        d.papeis.forEach(p => {
+            tbP.insertAdjacentHTML('beforeend', `<tr data-gram="${p.g}"><td>${p.g}</td><td><input type="number" value="${p.p64}"></td><td><input type="number" value="${p.p66}"></td></tr>`);
+        });
+        syncDropdowns(); // Chama sua função original que atualiza os selects
+        calc(); // Chama seu cálculo original
+    } else {
+        puxarPrecosDaPlanilha(); // Se for novo usuário, busca na sua planilha google
+    }
+}
 </script>
 
 <div style="display:none;"><table id="tbodyPapel"></table><table id="tbodyAcab"></table><table id="tbodyProduto"></table></div>
